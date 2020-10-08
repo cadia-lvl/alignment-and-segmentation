@@ -66,8 +66,6 @@ def create_segm_and_text(subtitle_filename, outdir):
             next(fin)
         groups = groupby(fin, str.isspace)
         count = 0
-        seg = []
-        text = []
         for (_, *rest) in (map(str.strip, v) for g, v in groups if not g):
             # write to text file
             # better to create individual speaker ids per episode or shows, more speaker ids, because a global one would create problems for cepstral mean normalization ineffective in training

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 export ASSET_ROOT=/home/staff/inga
 
 export KALDI_ROOT=$ASSET_ROOT/kaldi
@@ -8,7 +10,7 @@ export PATH=utils/:$KALDI_ROOT/tools/openfst/bin:/opt/mitlm/bin:/opt/sequitur/bi
 
 #PYTHONPATH=$PYTHONPATH:/opt/sequitur/lib/python2.7/site-packages/:~/.local/lib/python2.7/site-packages/:punctuator/
 #export PYTHONPATH
-export CONDAPATH=$ASSET_ROOT/miniconda2/bin
+#export CONDAPATH=$ASSET_ROOT/miniconda2/bin
 # # For libgpuarray, used in theano back end
 # export LIBRARY_PATH=$LIBRARY_PATH:~/.local/lib64/:~/.local/lib:~/kaldi/tools/openfst/lib
 # export CPATH=$CPATH:~/.local/include:~/kaldi/tools/openfst/include

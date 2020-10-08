@@ -1,3 +1,6 @@
+import os
+import argparse
+from pathlib import Path
 import pandas as pd
 
 # NOTE This is a copy of the ipython notebook with the same name. It has not been process into a real script
@@ -5,16 +8,43 @@ import pandas as pd
 # I need to find which speakers are within a subtitle time range.
 # I have a list of speakers and timestamps in data/ruv-di/<filename>/ruvdi_segments, let's call them diarization segments, and subtitle timestamps in /data/transcripts/<filename>/segments
 # I have to find within which diarization timestamps the subtitle timestamps lie and assign the corresponding spkID to the subtitle timestamp
-# NOTE! Before i start assigning spkIDs. I need to use reco2spk_num2spk_info.csv to fix the speaker IDs in the ruv-di data, and then put all the segment data into one file
-def fix_spkID(meta, diar, seg):
-    """Map the infile speaker IDs to the overall ones"""
-    for diar_row in diar.itertuples(index=False):
-        for meta_row in meta.itertuples(index=False):
-            if meta_row[0] == diar_row[3] and meta_row[1] == diar_row[0]:
-                seg.write(
-                    f"{meta_row[3]}-{diar_row[1]} {meta_row[3]}-{diar_row[3]} {diar_row[4]} {diar_row[5]}\n"
-                )
-                break
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="""Pair speaker identified diarization segments with the new segments obtained from audio-subtitle text alignment by\n
+        finding out which speakers are within a subtitle time range.
+        Usage: python local/timestamp_comparison.py <input-file> <output-dir>\n
+            E.g. python local/timestamp_comparison.py data/vtt_transcripts/4886083R7.vtt data
+        """
+    )
+    parser.add_argument(
+        "--strict",
+        default=True,
+        action="store_false",
+        help="Should the speaker ID pairing be strict or loose, i.e. should both timestamps be inside a diarization segments",
+    )
+    parser.add_argument(
+        "--subtitle_segments_file", type=file_path, help="Input subtitle segments file",
+    )
+    parser.add_argument(
+        "--diar_segments_wspkID",
+        type=file_path,
+        help="diarization segments file with speaker IDs",
+    )
+    parser.add_argument(
+        "--segments_out",
+        type=str,
+        help="output subtitle segments file with speaker IDs",
+    )
+    return parser.parse_args()
+
+
+def file_path(path):
+    if os.path.isfile(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid file")
 
 
 def extrack_spk(sub, spkdi, seg, strict: bool):
@@ -45,33 +75,22 @@ def extrack_spk(sub, spkdi, seg, strict: bool):
                 )
 
 
-if __name__ == "__main__":
+def main():
+    args = parse_arguments()
 
-    # use reco2spk_num2spk_info.csv to fix the speaker IDs in the ruv-di data, and then put all the segment data into one file
-    meta = pd.read_table(
-        "/home/staff/inga/h2/data/reco2spk_num2spk_info.csv", header=None, sep=","
-    )
-    diar = pd.read_table(
-        "/home/staff/inga/h2/data/ruv-di/all_segments",
-        header=None,
-        delim_whitespace=True,
-    )
+    output_segments = args.segments_out
+    outdir = os.path.dirname(output_segments)
+    Path(outdir).mkdir()
 
-    with open("/home/staff/inga/h2/data/ruv-di/all_segments_wspkID", "w") as seg:
-        fix_spkID(meta, diar, seg)
-    # Now I can pair my speaker identified diarization segments with the new segments obtained from audio-subtitle text alignment, which need speaker IDs.
+    sub = pd.read_table(args.subtitle_segments_file, header=None, sep="\s+")
+    spkdi = pd.read_table(args.diar_segments_wspkID, header=None, sep="\s+")
 
-    sub = pd.read_table(
-        "/work/inga/data/h2/judy_reseg/segments", header=None, delim_whitespace=True
-    )
-    spkdi = pd.read_table(
-        "/home/staff/inga/h2/data/ruv-di/all_segments_wspkID",
-        header=None,
-        delim_whitespace=True,
-    )
-
+    # Pair my speaker identified diarization segments with the new segments obtained from audio-subtitle text alignment, which need speaker IDs.
     # Actually, I'm being a bit lenient by allowing the subtitle timestampe to exceed the diarization one by 0.5 sec
-    strict = True
-    with open("/work/inga/data/h2/judy_reseg/segments_wspkid_strict2", "w") as seg:
-        extrack_spk(sub, spkdi, seg, strict=True)
+    with open(output_segments, "w") as seg:
+        extrack_spk(sub, spkdi, seg, strict=args.strict)
+
+
+if __name__ == "__main__":
+    main()
 
