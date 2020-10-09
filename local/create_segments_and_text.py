@@ -85,7 +85,7 @@ def create_segm_and_text(subtitle_filename, outdir):
             end_seconds = time_in_seconds(end_time)
             # write to segments file
             fseg.write(
-                f"unknown-{filename}_{count:05d} unknown-{filename} {start_seconds} {end_seconds}\n"
+                f"unknown-{filename}_{count:05d} {filename} {start_seconds} {end_seconds}\n"
             )
             count = count + 1
 

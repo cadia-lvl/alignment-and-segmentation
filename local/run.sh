@@ -31,9 +31,9 @@ if [ $# != 4 ]; then
 fi
 
 # change path for $data, $exp and $mfcc in conf/path.conf
-datadir=$data/h2/asr_ruvdi
+datadir="$data"/h2/asr_ruvdi
 ruvdi="$datadir"/../ruv-di
-expdir=$exp/h2/segmentation
+expdir="$exp"/h2/segmentation
 mfcc="$mfcc"
 
 mkdir -p "$datadir"/log, "$expdir", "$mfcc"
@@ -41,21 +41,22 @@ mkdir -p "$datadir"/log, "$expdir", "$mfcc"
 
 # From a list of recording IDs fetch the subtitles. List from Judy's diarization dir
 echo 'Extract subtitle files from RUV'
-for file in $(ls $corpusdir/wav); do
-    if [ "$file" != '/dev/fd/63' ]; then
-        php local/extract_vtt.php "${file%.*}" "$datadir"/vtt_transcripts
-    fi
+for path in "$corpusdir"/wav/*; do
+    file=$(basename "$path")
+    php local/extract_vtt.php "${file%.*}" "$datadir"/vtt_transcripts
 done
 
 echo 'Create the files necessary for Kaldi'
 echo 'Create wav.scp'
-for d in $(ls "$datadir"/vtt_transcripts); do
-    echo -e unknown-"${d%.*}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '/data/ruv-di/version0001/wav/"${d%.*}".wav' |' >> "$datadir"/wav.scp
+for path in "$datadir"/vtt_transcripts/*; do
+    name=$(basename "$path")
+    echo -e "${name%.*}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '/data/ruv-di/version0001/wav/"${name%.*}".wav' |' >> "$datadir"/wav.scp
 done
 
 echo 'Create utt2spk'
-for d in $(ls "$datadir"/transcripts); do
-    echo -e unknown-"${d%.*}"' unknown' >> "$datadir"/utt2spk
+for path in "$datadir"/transcripts/*; do
+    name=$(basename "$path")
+    echo -e unknown-"${name%.*}"' unknown' >> "$datadir"/utt2spk
 done
 
 echo 'Create spk2utt'
@@ -63,7 +64,7 @@ utils/utt2spk_to_spk2utt.pl < "$datadir"/utt2spk > "$datadir"/spk2utt
 
 echo 'Create segment and text files out of vtt subtitle files'
 # These are segmented into subtitles
-for file in $(ls "$datadir"/vtt_transcripts/*.vtt); do
+for file in "$datadir"/vtt_transcripts/*.vtt; do
     name=$(basename "$file")
     python local/create_segments_and_text.py \
     "$file" "$datadir"/transcripts/"${name%.*}"
@@ -72,13 +73,13 @@ done
 echo 'Because of incorrect subtitle timestamps. Join the text segments from each file together into a line with uttID'
 # All subtitles of a file are joined into one text connected to an uttID
 # and the text from all files are put into one. One line per recording
-for d in $("$datadir"/transcripts/); do
-    if [ "$d" != '/dev/fd/63' ]; then
-        cut -d' ' -f2- data/transcripts/"${d%.*}"/text \
-        | tr '\n' ' ' | sed -r "s/.*/unknown-${d%.*} &/" \
-        >> "$datadir"/raw_text \
-        echo >> "$datadir"/raw_text
-    fi
+for path in "$datadir"/transcripts/*; do
+    name=$(basename "$path")
+    cut -d' ' -f2- data/transcripts/"${name%.*}"/text \
+    | tr '\n' ' ' | sed -r "s/.*/unknown-${name%.*} &/" \
+    >> "$datadir"/raw_text \
+    echo >> "$datadir"/raw_text
+    
 done
 
 echo 'Clean the text'
@@ -151,7 +152,6 @@ steps/cleanup/clean_and_segment_data_nnet3.sh \
 "$srcdir" "$expdir" \
 "${datadir}"_reseg &
 wait
-#--segmentation-opts "--max-internal-silence-length=1.0 --max-internal-non-scored-length=1.0 --min-segment-length=1.0" \
 
 # Calculae the duration of the new segments
 utils/data/get_utt2dur.sh "${datadir}"_reseg
@@ -160,7 +160,26 @@ awk '{sum = sum + $2}END{print sum, sum/NR}' "${datadir}"_reseg
 # Sum of Judy's diarization segments is 25123.2 seconds or almost 7 hrs.
 # Original length of audio was 8.3 hrs
 
-# Do analysis on segment length
+# The segmentation process created very long suffices on the utterance IDs.
+# Shorten them. I can do that since these are not coupled to real speaker IDs.
+mv "${datadir}"_reseg/segments "${datadir}"_reseg/segments_orig
+i=0
+while IFS= read -r line
+do
+    printf -v j "%05d" "$i" # Pad the suffix with zeros
+    echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/segments
+    i=$((i+1))
+done < <(grep -v '^ *#' < "${datadir}"_reseg/segments_orig)
+
+# Change the suffices in text as well
+mv "${datadir}"_reseg/text "${datadir}"_reseg/text_orig
+i=0
+while IFS= read -r line
+do
+    printf -v j "%05d" "$i" # Pad the suffix with zeros
+    echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/text
+    i=$((i+1))
+done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
 
 echo 'Process RUV diarization data, since it contains speaker information. Then I can compare the new segments'
 echo 'to the diarization segments and extract speaker information'
@@ -174,10 +193,9 @@ sed -re 's/([0-9]+)[A-ZAÐEIOUYÞÆÖa-zaðeiouyþæö]+[0-9]+/\1/g' \
 
 mv "$ruvdi"/json/4886083R7_new.json "$ruvdi"/json/4886083R7.json
 
-for file in $(ls "$ruvdi"/json); do
-    if [ "$file" != '/dev/fd/63' ]; then
-        python local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
-    fi
+for path in "$ruvdi"/json/* ; do
+    file=$(basename "$path")
+    python local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
 done
 
 for f in "$ruvdi"/*/ruvdi_segments; do (cat "${f}"; echo) >> "$ruvdi"/all_segments; done
@@ -193,13 +211,32 @@ python local/swich_to_true_spkID.py \
 
 echo 'Assign speaker IDs from diarization data'
 python3 local/timestamp_comparison.py \
---strict \
 --subtitle_segments_file "${datadir}"_reseg/segments \
 --diar_segments_wspkID "$ruvdi"/all_segments_wspkID \
---segments_out "${datadir}"_final/segments
+--segments_out "${datadir}"_final/segments \
+--utt2spk_out "${datadir}"_final/utt2spk
 
 echo 'Fix the spkIDs in the other files'
-# To do!
 
+echo 'Fix IDs in text'
+# Keep lines in text where the (speaker removed) uttID exists in the final segments file
+while IFS= read -r line
+do
+    partID=$(echo "$line" | cut -d'-' -f2- | cut -d' ' -f1)
+    text=$(echo "$line" | cut -d' ' -f2-)
+    match=$(grep "$partID" "${datadir}"_final/segments | cut -d' ' -f1)
+    if [ -n "$match" ]; then
+        echo -e "$match $text" >> "${datadir}"_final/text
+    fi
+done < "${datadir}"_reseg/text
+
+# Copy wav.scp over
+cp "${datadir}"_reseg/wav.scp "${datadir}"_final/wav.scp
+
+echo 'Create spk2utt'
+utils/utt2spk_to_spk2utt.pl < "$datadir"_final/utt2spk > "$datadir"_final/spk2utt
+
+echo "Validate and fix ${datadir}_final"
+utils/validate_data_dir.sh --no-feats "${datadir}_final" || utils/fix_data_dir.sh "${datadir}_final" || exit 1;
 
 exit 0

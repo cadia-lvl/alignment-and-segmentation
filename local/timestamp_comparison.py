@@ -18,9 +18,9 @@ def parse_arguments():
             E.g. python local/timestamp_comparison.py data/vtt_transcripts/4886083R7.vtt data
         """
     )
+    # NOTE! How does this work? Should I call it --loose instead and is it then strict if not provided?
     parser.add_argument(
-        "--strict",
-        default=True,
+        "--loose",
         action="store_false",
         help="Should the speaker ID pairing be strict or loose, i.e. should both timestamps be inside a diarization segments",
     )
@@ -37,6 +37,11 @@ def parse_arguments():
         type=str,
         help="output subtitle segments file with speaker IDs",
     )
+    parser.add_argument(
+        "--utt2spk_out",
+        type=str,
+        help="output subtitle utterance ID to speaker ID file",
+    )
     return parser.parse_args()
 
 
@@ -47,7 +52,7 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid file")
 
 
-def extrack_spk(sub, spkdi, seg, strict: bool):
+def extrack_spk(sub, spkdi, seg, utt2spk, strict: bool):
     ids = sub[1].unique()
     recoid_list = [id.split("-")[1] for id in ids]  # List of all recording IDs
     for recoid in recoid_list:
@@ -71,8 +76,9 @@ def extrack_spk(sub, spkdi, seg, strict: bool):
                 spkid2 = spkid.split()[1]
                 sub_recoid, count = sub_row[0].split("-")[1:3]
                 seg.write(
-                    f"{spkid2}-{sub_recoid}-{count} {spkid2}-{sub_recoid} {sub_row[2]} {sub_row[3]}\n"
+                    f"{spkid2}-{sub_recoid}-{count} {sub_recoid} {sub_row[2]} {sub_row[3]}\n"
                 )
+                utt2spk.write(f"{spkid2}-{sub_recoid}-{count} {spkid2}\n")
 
 
 def main():
@@ -87,8 +93,8 @@ def main():
 
     # Pair my speaker identified diarization segments with the new segments obtained from audio-subtitle text alignment, which need speaker IDs.
     # Actually, I'm being a bit lenient by allowing the subtitle timestampe to exceed the diarization one by 0.5 sec
-    with open(output_segments, "w") as seg:
-        extrack_spk(sub, spkdi, seg, strict=args.strict)
+    with open(output_segments, "w") as seg, open(args.utt2spk_out, "w") as utt2spk:
+        extrack_spk(sub, spkdi, seg, utt2spk, strict=args.loose)
 
 
 if __name__ == "__main__":
