@@ -20,9 +20,10 @@ def parse_arguments():
     )
     # NOTE! How does this work? Should I call it --loose instead and is it then strict if not provided?
     parser.add_argument(
-        "--loose",
-        action="store_false",
-        help="Should the speaker ID pairing be strict or loose, i.e. should both timestamps be inside a diarization segments",
+        "--collar",
+        nargs="?",
+        default=0.25,
+        help="How far outside the diarization segment (end timestamp) can the subtitle segment go in seconds",
     )
     parser.add_argument(
         "--subtitle_segments_file", type=file_path, help="Input subtitle segments file",
@@ -52,7 +53,7 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid file")
 
 
-def extrack_spk(sub, spkdi, seg, utt2spk, strict: bool):
+def extract_spk(sub, spkdi, seg, utt2spk, collar):
     ids = sub[1].unique()
     recoid_list = [id.split("-")[1] for id in ids]  # List of all recording IDs
     for recoid in recoid_list:
@@ -61,16 +62,10 @@ def extrack_spk(sub, spkdi, seg, utt2spk, strict: bool):
         sub_part = sub[sub[1].str.contains(recoid)]
         # start = 0
         for sub_row in sub_part.itertuples(index=False):
-            # Find all rows is diarization data that have segment start before my subtitle start and segment end after it
-            if strict:
-                dirows = spkdi_part.loc[
-                    (spkdi_part[2] <= sub_row[2])
-                    & ((spkdi_part[3] + 0.5) >= sub_row[3])
-                ]
-            else:
-                dirows = spkdi_part.loc[
-                    (spkdi_part[2] <= sub_row[2]) & (spkdi_part[3] >= sub_row[2])
-                ]
+            # Find all rows in the diarization data that have segment start before my subtitle start and segment end after it
+            dirows = spkdi_part.loc[
+                (spkdi_part[2] <= sub_row[2]) & ((spkdi_part[3] + collar) >= sub_row[3])
+            ]
             if not dirows.empty:
                 spkid = str(dirows[1]).split("-")[0]  # Extract the spkID from the uttID
                 spkid2 = spkid.split()[1]
@@ -94,7 +89,7 @@ def main():
     # Pair my speaker identified diarization segments with the new segments obtained from audio-subtitle text alignment, which need speaker IDs.
     # Actually, I'm being a bit lenient by allowing the subtitle timestampe to exceed the diarization one by 0.5 sec
     with open(output_segments, "w") as seg, open(args.utt2spk_out, "w") as utt2spk:
-        extrack_spk(sub, spkdi, seg, utt2spk, strict=args.loose)
+        extract_spk(sub, spkdi, seg, utt2spk, collar=args.collar)
 
 
 if __name__ == "__main__":

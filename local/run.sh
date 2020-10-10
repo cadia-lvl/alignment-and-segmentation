@@ -50,7 +50,7 @@ echo 'Create the files necessary for Kaldi'
 echo 'Create wav.scp'
 for path in "$datadir"/vtt_transcripts/*; do
     name=$(basename "$path")
-    echo -e "${name%.*}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '/data/ruv-di/version0001/wav/"${name%.*}".wav' |' >> "$datadir"/wav.scp
+    echo -e "${name%.*}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/${name%.*}".wav' |' >> "$datadir"/wav.scp
 done
 
 echo 'Create utt2spk'
@@ -204,7 +204,7 @@ grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_se
 # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
 echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
 cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
-python local/swich_to_true_spkID.py \
+python local/switch_to_true_spkID.py \
 --spkID_map "$ruvdi"/reco2spk_num2spk_label.csv \
 --diar_segments "$ruvdi"/all_segments \
 "$ruvdi"/all_segments_wspkID
