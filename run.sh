@@ -35,6 +35,7 @@ datadir="$data"/h2/asr_ruvdi
 ruvdi="$datadir"/../ruv-di
 expdir="$exp"/h2/segmentation
 mfcc="$mfcc"
+cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 
 mkdir -p "$datadir"/log, "$expdir", "$mfcc"
 
@@ -203,7 +204,6 @@ grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_se
 
 # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
 echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
-cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 python local/switch_to_true_spkID.py \
 --spkID_map "$ruvdi"/reco2spk_num2spk_label.csv \
 --diar_segments "$ruvdi"/all_segments \
