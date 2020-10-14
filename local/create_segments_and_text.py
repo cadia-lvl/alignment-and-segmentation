@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Author: Judy Fong (Reykjavik University)
 # Description:
 # Create segments file from subtitle timestamps

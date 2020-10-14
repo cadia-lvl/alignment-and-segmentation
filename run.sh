@@ -11,8 +11,8 @@
 # Split into multiple unknown speakers or not? I guess multiple is better
 
 # Create these symlinks before running:
-#ln -s ../kaldi/egs/wsj/steps steps
-#ln -s ../kaldi/egs/wsj/utils utils
+#ln -s ../kaldi/egs/wsj/s5/steps steps
+#ln -s ../kaldi/egs/wsj/s5/utils utils
 
 srcdir=/models/althingi/acoustic_model/chain/5.4/tdnn/20190114
 langdir=$srcdir/lmdir/lang
@@ -22,12 +22,10 @@ corpusdir=/data/ruv-di/version0001
 . ./path.sh
 . ./cmd.sh
 
-if [ $# != 4 ]; then
-    echo ""
-    echo ""
-    echo "Usage: local/expand.sh [options] <diarization-corpus-dir> <output-data-dir> <output-diarization-data-dir> <exp-dir>"
-    echo "e.g.: local/expand.sh data/cleantext.txt data/text_expanded"
-    exit 1;
+if [ "$1" == "-h" ]; then
+    echo "Create ASR training data from TV recordings and subtitle data, paired with diarization data for speaker info"
+    echo "Usage: $(basename $0) [-h]"
+    exit 0
 fi
 
 # change path for $data, $exp and $mfcc in conf/path.conf
