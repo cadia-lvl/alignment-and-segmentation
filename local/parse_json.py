@@ -1,5 +1,4 @@
-# TODO Extract from the json files: spkIDs, recoIDs and timestamps for each segment.
-# TODO Create spk2utt and utt2spk files and a segments file
+#!/usr/bin/env python3
 
 import os
 import argparse
