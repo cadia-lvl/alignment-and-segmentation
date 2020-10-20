@@ -27,8 +27,8 @@ corpusdir=/data/ruv-di/version0001
 . ./cmd.sh
 
 # Create these symlinks before running:
-ln -sfn $KALDI_ROOT/egs/wsj/s5/steps steps
-ln -sfn $KALDI_ROOT/egs/wsj/s5/utils utils
+ln -sfn "$KALDI_ROOT"/egs/wsj/s5/steps steps
+ln -sfn "$KALDI_ROOT"/egs/wsj/s5/utils utils
 
 if [ "$1" == "-h" ]; then
     echo "Create ASR training data from TV recordings and subtitle data,"

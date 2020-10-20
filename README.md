@@ -35,4 +35,4 @@ funded by the Icelandic Ministry of Education, Science and Culture.
 
 ## Contribution guidelines
 To contribute to this project, create a pull request outlining the changes you
-want to make and why.
+want to make and why. Also, use **shellcheck** to get find bugs.
