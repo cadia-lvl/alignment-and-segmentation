@@ -245,4 +245,6 @@ utils/utt2spk_to_spk2utt.pl < "$datadir"_final/utt2spk > "$datadir"_final/spk2ut
 echo "Validate and fix ${datadir}_final"
 utils/validate_data_dir.sh --no-feats "${datadir}_final" || utils/fix_data_dir.sh "${datadir}_final" || exit 1;
 
+echo "$0 has finished running"
+
 exit 0
