@@ -42,9 +42,10 @@ datadir="$data"/h2/asr_ruvdi
 ruvdi="$datadir"/../ruv-di
 expdir="$exp"/h2/segmentation
 mfcc="$mfcc"
-cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 
 mkdir -p "$datadir"/log "$expdir" "$mfcc"
+
+cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 
 
 # From a list of recording IDs fetch the subtitles. List from Judy's diarization dir
