@@ -47,9 +47,9 @@ mkdir -p "$datadir"/log "$expdir" "$mfcc"
 
 cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 
-
 # From a list of recording IDs fetch the subtitles. List from Judy's diarization dir
 echo 'Extract subtitle files from RUV'
+mkdir -p "$datadir"/vtt_transcripts
 for path in "$corpusdir"/wav/*; do
     file=$(basename "$path")
     php local/extract_vtt.php "${file%.*}" "$datadir"/vtt
