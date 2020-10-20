@@ -11,9 +11,17 @@ the Ruv-di dataset.
 
 
 ## Running
-1. To run the scripts, clone this directory in the Kaldi egs folder.
+1. To run the scripts, clone this directory in the Kaldi egs folder or just
+make sure  that path.sh points to your working version of kaldi.
 
-2. Adjust the directory locations.
+2. Adjust the directory locations. 
+
+    Within path.sh change ASSET_ROOT and KALDI_ROOT to your directories.
+
+    Change path for exp, data, mfcc, and mfcc_hires in conf/path.conf
+
+    Within run.sh change srcdir and corpusdir, possibly the in-between
+    variables too if you don't have the same directory structure.
 
 3. Then, everything can be run through the bash script run.sh. On the command
 line type:
