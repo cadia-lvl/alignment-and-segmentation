@@ -44,7 +44,7 @@ expdir="$exp"/h2/segmentation
 mfcc="$mfcc"
 cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 
-mkdir -p "$datadir"/log, "$expdir", "$mfcc"
+mkdir -p "$datadir"/log "$expdir" "$mfcc"
 
 
 # From a list of recording IDs fetch the subtitles. List from Judy's diarization dir
