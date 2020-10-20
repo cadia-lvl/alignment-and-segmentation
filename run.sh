@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 
-# Get data on the format that Kaldi wants before aligning and segmenting the data.
-# I get subtitle data but since the timestamps are often off I will put all the text together and resegment
-# I don't have speaker IDs so for the segmentation I will try using a single sudo one for everyone
-# and see whether that will be good enough
-# I start with extracting the same data as Judy has for diarization to be able to assign speaker IDs later
+# Copyright 2020 Inga Rún Helgadóttir
+
+# Get data in the format that Kaldi wants before aligning and segmenting the
+# data.
+
+# Start by getting subtitle data but since the timestamps are often off, put
+# all the text together and resegment.
+# There are no speaker IDs so for the segmentation use a single sudo one for
+# everyone and see whether that will be good enough.
+# Extract the same data as Judy has for diarization(ruvdi) to be able to assign
+# speaker IDs later.
+
 # Run from H2 directory
 
-# NOTE! segment_long_utterances_nnet3.sh creates new speaker IDs, how should I treat spkIDs up to that point?
-# Split into multiple unknown speakers or not? I guess multiple is better
-
-# Create these symlinks before running:
-#ln -s ../kaldi/egs/wsj/s5/steps steps
-#ln -s ../kaldi/egs/wsj/s5/utils utils
+# NOTE! segment_long_utterances_nnet3.sh creates new speaker IDs, how should I
+# treat spkIDs up to that point?
+# Split into multiple unknown speakers or not? I guess multiple is better.
 
 srcdir=/models/althingi/acoustic_model/chain/5.4/tdnn/20190114
 langdir=$srcdir/lmdir/lang
@@ -22,8 +26,13 @@ corpusdir=/data/ruv-di/version0001
 . ./path.sh
 . ./cmd.sh
 
+# Create these symlinks before running:
+ln -sfn $KALDI_ROOT/egs/wsj/s5/steps steps
+ln -sfn $KALDI_ROOT/egs/wsj/s5/utils utils
+
 if [ "$1" == "-h" ]; then
-    echo "Create ASR training data from TV recordings and subtitle data, paired with diarization data for speaker info"
+    echo "Create ASR training data from TV recordings and subtitle data,"
+    echo "paired with diarization data for speaker info"
     echo "Usage: $(basename $0) [-h]"
     exit 0
 fi
