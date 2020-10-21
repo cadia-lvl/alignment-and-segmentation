@@ -97,11 +97,12 @@ if [ $stage -le 3 ]; then
     # and the text from all files are put into one. One line per recording
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
-        cut -d' ' -f2- data/transcripts/"${name}"/text \
-        | tr '\n' ' ' | sed -r "s/.*/unknown-${name} &/" \
-        >> "$datadir"/raw_text \
-        echo >> "$datadir"/raw_text
-        
+        if [ -f "$datadir"/transcripts/"${name}"/text ]; then
+            cut -d' ' -f2- "$datadir"/transcripts/"${name}"/text \
+            | tr '\n' ' ' | sed -r "s/.*/unknown-${name} &/" \
+            >> "$datadir"/raw_text \
+            echo >> "$datadir"/raw_text
+        fi
     done
 fi
 
