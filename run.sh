@@ -18,7 +18,7 @@
 # treat spkIDs up to that point?
 # Split into multiple unknown speakers or not? I guess multiple is better.
 
-set -o pipefail
+set -eo pipefail
 
 stage=0
 
