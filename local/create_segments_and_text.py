@@ -60,36 +60,36 @@ def create_segm_and_text(subtitle_filename, outdir):
         base = os.path.basename(subtitle_filename)
         (filename, ext) = os.path.splitext(base.replace("_", ""))
 
-    with open(subtitle_filename, "r") as fin, open(
-        outdir + "/segments", "w"
-    ) as fseg, open(outdir + "/text", "w") as ftext:
-        if ext == ".vtt":
-            next(fin)
-            next(fin)
-        groups = groupby(fin, str.isspace)
-        count = 0
-        for (_, *rest) in (map(str.strip, v) for g, v in groups if not g):
-            # write to text file
-            # better to create individual speaker ids per episode or shows, more speaker ids, because a global one would create problems for cepstral mean normalization ineffective in training
-            string = " ".join([*rest[1:]])
-            ftext.write(f"unknown-{filename}_{count:05d} {string}\n")
+        with open(subtitle_filename, "r") as fin, open(
+            outdir + "/segments", "w"
+        ) as fseg, open(outdir + "/text", "w") as ftext:
             if ext == ".vtt":
-                start_time, _, end_time, _ = (str(*rest[:1])).split(" ", 3)
-            elif ext == ".srt":
-                start_time, _, end_time = (str(*rest[:1])).split(" ", 2)
-            else:
-                print(
-                    "The file was not recognized as a subtitle file(\
-                        .vtt or .srt)."
+                next(fin)
+                next(fin)
+            groups = groupby(fin, str.isspace)
+            count = 0
+            for (_, *rest) in (map(str.strip, v) for g, v in groups if not g):
+                # write to text file
+                # better to create individual speaker ids per episode or shows, more speaker ids, because a global one would create problems for cepstral mean normalization ineffective in training
+                string = " ".join([*rest[1:]])
+                ftext.write(f"unknown-{filename}_{count:05d} {string}\n")
+                if ext == ".vtt":
+                    start_time, _, end_time, _ = (str(*rest[:1])).split(" ", 3)
+                elif ext == ".srt":
+                    start_time, _, end_time = (str(*rest[:1])).split(" ", 2)
+                else:
+                    print(
+                        "The file was not recognized as a subtitle file(\
+                            .vtt or .srt)."
+                    )
+                    exit(1)
+                start_seconds = time_in_seconds(start_time)
+                end_seconds = time_in_seconds(end_time)
+                # write to segments file
+                fseg.write(
+                    f"unknown-{filename}_{count:05d} {filename} {start_seconds} {end_seconds}\n"
                 )
-                exit(1)
-            start_seconds = time_in_seconds(start_time)
-            end_seconds = time_in_seconds(end_time)
-            # write to segments file
-            fseg.write(
-                f"unknown-{filename}_{count:05d} {filename} {start_seconds} {end_seconds}\n"
-            )
-            count = count + 1
+                count = count + 1
 
 
 def main():
