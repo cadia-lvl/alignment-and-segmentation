@@ -42,40 +42,39 @@ mkdir -p "$datadir"/log, "$expdir", "$mfcc"
 echo 'Extract subtitle files from RUV'
 for path in "$corpusdir"/wav/*; do
     file=$(basename "$path")
-    php local/extract_vtt.php "${file%.*}" "$datadir"/vtt_transcripts
+    php local/extract_vtt.php "${file%.*}" "$datadir"/vtt
 done
 
 echo 'Create the files necessary for Kaldi'
+echo 'Create segment and text files out of vtt subtitle files'
+for file in "$datadir"/vtt/*.vtt; do
+    name=$(basename "$file")
+    python3 local/create_segments_and_text.py \
+    "$file" "$datadir"/transcripts/"${name%.*}"
+done
+
 echo 'Create wav.scp'
-for path in "$datadir"/vtt_transcripts/*; do
+for path in "$datadir"/transcripts/*; do
     name=$(basename "$path")
-    echo -e "${name%.*}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/${name%.*}".wav' |' >> "$datadir"/wav.scp
+    echo -e "${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/${name}".wav' |' >> "$datadir"/wav.scp
 done
 
 echo 'Create utt2spk'
 for path in "$datadir"/transcripts/*; do
     name=$(basename "$path")
-    echo -e unknown-"${name%.*}"' unknown' >> "$datadir"/utt2spk
+    echo -e unknown-"${name}"' unknown' >> "$datadir"/utt2spk
 done
 
 echo 'Create spk2utt'
 utils/utt2spk_to_spk2utt.pl < "$datadir"/utt2spk > "$datadir"/spk2utt
-
-echo 'Create segment and text files out of vtt subtitle files'
-# These are segmented into subtitles
-for file in "$datadir"/vtt_transcripts/*.vtt; do
-    name=$(basename "$file")
-    python local/create_segments_and_text.py \
-    "$file" "$datadir"/transcripts/"${name%.*}"
-done
 
 echo 'Because of incorrect subtitle timestamps. Join the text segments from each file together into a line with uttID'
 # All subtitles of a file are joined into one text connected to an uttID
 # and the text from all files are put into one. One line per recording
 for path in "$datadir"/transcripts/*; do
     name=$(basename "$path")
-    cut -d' ' -f2- data/transcripts/"${name%.*}"/text \
-    | tr '\n' ' ' | sed -r "s/.*/unknown-${name%.*} &/" \
+    cut -d' ' -f2- data/transcripts/"${name}"/text \
+    | tr '\n' ' ' | sed -r "s/.*/unknown-${name} &/" \
     >> "$datadir"/raw_text \
     echo >> "$datadir"/raw_text
     
