@@ -52,7 +52,7 @@ mfcc="$mfcc"
 
 if [ $stage -le 0 ]; then
     mkdir -p "$datadir"/log "$expdir" "$mfcc"
-
+    
     cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 fi
 
@@ -74,7 +74,7 @@ if [ $stage -le 2 ]; then
         python3 local/create_segments_and_text.py \
         "$file" "$datadir"/transcripts/"${name%.*}"
     done
-
+    
     echo 'Create wav.scp'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
@@ -113,37 +113,28 @@ if [ $stage -le 4 ]; then
     wait
     # NOTE! Fix the uttIDs
     sed -i -r 's/^(unknown) ([0-9]+) ([a-z]) ([0-9])/\1-\2\u\3\4/' "$datadir"/text_cleaned
-
+    
     echo 'Expand abbreviations and numbers'
     utils/slurm.pl --mem 4G "$datadir"/log/expand_text.log \
     local/expand_text.sh "$datadir"/text_cleaned "$datadir"/text_expanded &
-
+    
     echo "Remove punctuations to make the text better fit for acoustic modelling."
     sed -re 's: [^A-ZÁÐÉÍÓÚÝÞÆÖa-záðéíóúýþæö ] : :g' -e 's: +: :g' \
     < "${datadir}"/text_expanded > "$datadir"/text || exit 1;
-
+    
     utils/validate_data_dir.sh --no-feats "$datadir" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
 if [ $stage -le 5 ]; then
-    echo "Extract features"
-    steps/make_mfcc.sh \
-    --nj 20 \
-    --mfcc-config conf/mfcc.conf \
-    --cmd "$train_cmd"           \
-    "${datadir}" "$expdir"/make_mfcc "$mfcc"
-
-    utils/copy_data_dir.sh "${datadir}" "${datadir}"_hires
-
-    echo "Create high resolution features which are used with Kaldi's nnet models"
+    echo "Extract high resolution features which are used with Kaldi's nnet models"
     steps/make_mfcc.sh \
     --nj 20 \
     --mfcc-config conf/mfcc_hires.conf \
     --cmd "$decode_cmd" \
-    "${datadir}"_hires \
+    "${datadir}" \
     "$expdir"/make_hires/ "$mfcc"
-
-    utils/validate_data_dir.sh "${datadir}"_hires || utils/fix_data_dir.sh "${datadir}"_hires || exit 1;
+    
+    utils/validate_data_dir.sh "${datadir}" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
 if [ $stage -le 6 ]; then
@@ -152,25 +143,25 @@ if [ $stage -le 6 ]; then
     # comm -23 <(awk '$2 ~ /[[:print:]]/ { print $2 }' "${datadir}"/words.cnt | sort) <(cut -d" " -f1 $langdir/words.txt | sort) > "${datadir}"/vocab_text_only.tmp
     # join -1 1 -2 1 "${datadir}"/vocab_text_only.tmp <(awk '$2 ~ /[[:print:]]/ { print $2" "$1 }' ${datadir}/words.cnt | sort -k1,1) | sort | awk '{total = total + $2}END{print total}'
     # # Get 2.3% OOV rate. I think that is ok.
-
+    
     echo "Create crude shorter segments using an out-of-domain recognizer"
     utils/slurm.pl --mem 8G "$datadir"/log/segmentation_long_utterances.log \
     steps/cleanup/segment_long_utterances_nnet3.sh \
     --nj 20 \
     --extractor "$extractor" \
     "$srcdir" "$langdir" \
-    "${datadir}"_hires "${datadir}"_segm_long \
+    "${datadir}" "${datadir}"_segm_long \
     "$expdir"/long &
-
+    
     utils/validate_data_dir.sh "${datadir}"_segm_long || utils/fix_data_dir.sh "${datadir}"_segm_long
-
+    
     steps/make_mfcc.sh \
     --nj 20 \
     --mfcc-config conf/mfcc_hires.conf \
     --cmd "$decode_cmd" \
     "${datadir}"_segm_long \
     "$expdir"/make_hires/ "$mfcc"
-
+    
     echo "Re-segment using an out-of-domain recognizer"
     utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
     steps/cleanup/clean_and_segment_data_nnet3.sh \
@@ -180,14 +171,14 @@ if [ $stage -le 6 ]; then
     "$srcdir" "$expdir" \
     "${datadir}"_reseg &
     wait
-
+    
     # Calculae the duration of the new segments
     utils/data/get_utt2dur.sh "${datadir}"_reseg
     awk '{sum = sum + $2}END{print sum, sum/NR}' "${datadir}"_reseg
     # Get 17494.2 seconds, i.e. around 4 hrs and 50 min, for Judy's ruv-di set. Average segment length is 4.3 sek
     # Sum of Judy's diarization segments is 25123.2 seconds or almost 7 hrs.
     # Original length of audio was 8.3 hrs
-
+    
     # The segmentation process created very long suffices on the utterance IDs.
     # Shorten them. I can do that since these are not coupled to real speaker IDs.
     mv "${datadir}"_reseg/segments "${datadir}"_reseg/segments_orig
@@ -198,7 +189,7 @@ if [ $stage -le 6 ]; then
         echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/segments
         i=$((i+1))
     done < <(grep -v '^ *#' < "${datadir}"_reseg/segments_orig)
-
+    
     # Change the suffices in text as well
     mv "${datadir}"_reseg/text "${datadir}"_reseg/text_orig
     i=0
@@ -208,43 +199,43 @@ if [ $stage -le 6 ]; then
         echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/text
         i=$((i+1))
     done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
-
+    
     echo 'Process RUV diarization data, since it contains speaker information. Then I can compare the new segments'
     echo 'to the diarization segments and extract speaker information'
-
+    
     # Since the first file has a different kind of spkIDs I need to get them on the same format as in the other files.
     cp -r $corpusdir/json/ "$ruvdi"
     sed -re 's/([0-9]+)[A-ZAÐEIOUYÞÆÖa-zaðeiouyþæö]+[0-9]+/\1/g' \
     -e 's/([0-9]+)[A-ZAÐEIOUYÞÆÖa-zaðeiouyþæö]+/\1/g' \
     < "$ruvdi"/json/4886083R7.json \
     > "$ruvdi"/json/4886083R7_new.json
-
+    
     mv "$ruvdi"/json/4886083R7_new.json "$ruvdi"/json/4886083R7.json
-
+    
     for path in "$ruvdi"/json/* ; do
         file=$(basename "$path")
         python local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
     done
-
+    
     for f in "$ruvdi"/*/ruvdi_segments; do (cat "${f}"; echo) >> "$ruvdi"/all_segments; done
     grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_segments
-
+    
     # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
     echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
     python local/switch_to_true_spkID.py \
     --spkID_map "$ruvdi"/reco2spk_num2spk_label.csv \
     --diar_segments "$ruvdi"/all_segments \
     "$ruvdi"/all_segments_wspkID
-
+    
     echo 'Assign speaker IDs from diarization data'
     python3 local/timestamp_comparison.py \
     --subtitle_segments_file "${datadir}"_reseg/segments \
     --diar_segments_wspkID "$ruvdi"/all_segments_wspkID \
     --segments_out "${datadir}"_final/segments \
     --utt2spk_out "${datadir}"_final/utt2spk
-
+    
     echo 'Fix the spkIDs in the other files'
-
+    
     echo 'Fix IDs in text'
     # Keep lines in text where the (speaker removed) uttID exists in the final segments file
     while IFS= read -r line
@@ -256,13 +247,13 @@ if [ $stage -le 6 ]; then
             echo -e "$match $text" >> "${datadir}"_final/text
         fi
     done < "${datadir}"_reseg/text
-
+    
     # Copy wav.scp over
     cp "${datadir}"_reseg/wav.scp "${datadir}"_final/wav.scp
-
+    
     echo 'Create spk2utt'
     utils/utt2spk_to_spk2utt.pl < "$datadir"_final/utt2spk > "$datadir"_final/spk2utt
-
+    
     echo "Validate and fix ${datadir}_final"
     utils/validate_data_dir.sh --no-feats "${datadir}_final" || utils/fix_data_dir.sh "${datadir}_final" || exit 1;
 fi
