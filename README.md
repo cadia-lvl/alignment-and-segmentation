@@ -1,49 +1,46 @@
-# Title 
-Project description as a paragraph or so explaining what this project does and perhaps why.
+# H2 - alignment system
+These are the scripts for preparing the RÚV TV material for ASR.
 
 ## Table of Contents
 [Easy to use TOC generator](https://ecotrust-canada.github.io/markdown-toc/)
 
 ## Installation
+They are dependent on [Kaldi](https://github.com/kaldi-asr/kaldi) and the
+unreleased Ruv-di dataset. These scripts assume there are speaker ids within
+the Ruv-di dataset.
 
-* software requirements
-* dependencies
-
-It is also helpful to provide commands which assist users installing the program or even providing an `install.sh` script which does it for the user.
 
 ## Running
-How to run the program/application/model and common use-cases and outputs.
-For the program to be easily usable this section can be quite long.
-When providing examples, add a sentence describing what it's demonstrating.
+1. To run the scripts, clone this directory in the Kaldi egs folder or just
+make sure  that path.sh points to your working version of kaldi.
 
-## API reference (Optional)
-If lengthy, this should be a separate document placed as HTML into the `docs/` folder. For more inforation see [`documentation`](https://github.com/cadia-lvl/SoftwareDevelopmentGuidelines#documentation).
+2. Adjust the directory locations. 
+
+    Within path.sh change ASSET_ROOT and KALDI_ROOT to your directories.
+
+    Change path for exp, data, mfcc, and mfcc_hires in conf/path.conf
+
+    Within run.sh change srcdir and corpusdir, possibly the in-between
+    variables too if you don't have the same directory structure.
+
+3. Then, everything can be run through the bash script run.sh. On the command
+line type:
+
+    `./run.sh`
 
 ## License
-Mention which LICENSE the code uses. For more information about licensing see [LICENCE](LICENCE) and the [LVL Software Guidelines](https://github.com/cadia-lvl/SoftwareDevelopmentGuidelines#license).
-"The license is available at [LICENCE](LICENCE)."
+These scripts are currently not licensed.
 
 ## Authors/Credit
 Reykjavik University
 
-Main authors <email.addresses>
+Inga Rún Helgadóttir <ingarun@ru.is>
 
 ## Acknowledgements
-If the funding is from a public grant, mention the source of the funding and link to their website.
+This project was funded by the Language Technology Programme for Icelandic
+2019-2023. The programme, which is managed and coordinated by Almannarómur, is
+funded by the Icelandic Ministry of Education, Science and Culture.
 
-"This project was funded by the Language Technology Programme for Icelandic 2019-2023. The programme, which is managed and coordinated by [Almannarómur](https://almannaromur.is/), is funded by the Icelandic Ministry of Education, Science and Culture."
-
-## Contribution guidelines (Optional)
-Explain how people can contribute to this repository. This can also link to a separate Developer reference
-
-* how to contribute
-* creating issues
-* where to get data
-* testing
-
-## Description of folder structure (Optional)
-
-## Changelog/Versions (Optional)
-
-## Papers/References (Optional)
-```You would have a citation snippet here as a code block```
+## Contribution guidelines
+To contribute to this project, create a pull request outlining the changes you
+want to make and why. Also, use **shellcheck** to get find bugs.
