@@ -100,7 +100,7 @@ if [ $stage -le 3 ]; then
         if [ -f "$datadir"/transcripts/"${name}"/text ]; then
             cut -d' ' -f2- "$datadir"/transcripts/"${name}"/text \
             | tr '\n' ' ' | sed -r "s/.*/unknown-${name} &/" \
-            >> "$datadir"/raw_text \
+            >> "$datadir"/raw_text
             echo >> "$datadir"/raw_text
         fi
     done
