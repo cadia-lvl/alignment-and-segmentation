@@ -78,7 +78,7 @@ if [ $stage -le 2 ]; then
     echo 'Create wav.scp'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
-        echo -e "${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/${name}".wav' |' >> "$datadir"/wav.scp
+        echo -e 'unknown-'"${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/${name}".wav' |' >> "$datadir"/wav.scp
     done
     
     echo 'Create utt2spk'
@@ -116,12 +116,12 @@ if [ $stage -le 4 ]; then
     
     echo 'Expand abbreviations and numbers'
     utils/slurm.pl --mem 4G "$datadir"/log/expand_text.log \
-    local/expand_text.sh "$datadir"/text_cleaned "$datadir"/text_expanded &
+    local/expand_text.sh "$datadir"/text_cleaned "$datadir"/text_expanded
     
     echo "Remove punctuations to make the text better fit for acoustic modelling."
     sed -re 's: [^A-ZÁÐÉÍÓÚÝÞÆÖa-záðéíóúýþæö ] : :g' -e 's: +: :g' \
     < "${datadir}"/text_expanded > "$datadir"/text || exit 1;
-    
+
     utils/validate_data_dir.sh --no-feats "$datadir" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
@@ -137,7 +137,7 @@ if [ $stage -le 5 ]; then
     utils/validate_data_dir.sh "${datadir}" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
-if [ $stage -le 6 ]; then
+if [ $stage -eq 6 ]; then
     # Estimate the OOV rate to see whether I need to update my lexicon
     # cut -d' ' -f2- "${datadir}"/text | tr ' ' '\n' | sort |uniq -c > "${datadir}"/words.cnt
     # comm -23 <(awk '$2 ~ /[[:print:]]/ { print $2 }' "${datadir}"/words.cnt | sort) <(cut -d" " -f1 $langdir/words.txt | sort) > "${datadir}"/vocab_text_only.tmp
