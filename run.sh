@@ -161,7 +161,9 @@ if [ $stage -eq 6 ]; then
     --cmd "$decode_cmd" \
     "${datadir}"_segm_long \
     "$expdir"/make_hires/ "$mfcc"
+fi
     
+if [ $stage -eq 7 ]; then
     echo "Re-segment using an out-of-domain recognizer"
     utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
     steps/cleanup/clean_and_segment_data_nnet3.sh \
@@ -199,7 +201,9 @@ if [ $stage -eq 6 ]; then
         echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/text
         i=$((i+1))
     done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
+fi
     
+if [ $stage -eq 8 ]; then
     echo 'Process RUV diarization data, since it contains speaker information. Then I can compare the new segments'
     echo 'to the diarization segments and extract speaker information'
     
@@ -219,21 +223,27 @@ if [ $stage -eq 6 ]; then
     
     for f in "$ruvdi"/*/ruvdi_segments; do (cat "${f}"; echo) >> "$ruvdi"/all_segments; done
     grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_segments
+fi
     
+if [ $stage -eq 9 ]; then
     # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
     echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
     python local/switch_to_true_spkID.py \
     --spkID_map "$ruvdi"/reco2spk_num2spk_label.csv \
     --diar_segments "$ruvdi"/all_segments \
     "$ruvdi"/all_segments_wspkID
+fi
     
+if [ $stage -eq 10 ]; then
     echo 'Assign speaker IDs from diarization data'
     python3 local/timestamp_comparison.py \
     --subtitle_segments_file "${datadir}"_reseg/segments \
     --diar_segments_wspkID "$ruvdi"/all_segments_wspkID \
     --segments_out "${datadir}"_final/segments \
     --utt2spk_out "${datadir}"_final/utt2spk
+fi
     
+if [ $stage -eq 11 ]; then
     echo 'Fix the spkIDs in the other files'
     
     echo 'Fix IDs in text'
