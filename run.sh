@@ -78,7 +78,7 @@ if [ $stage -le 2 ]; then
     echo 'Create wav.scp'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
-        echo -e 'unknown-'"${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/${name}".wav' |' >> "$datadir"/wav.scp
+        echo -e 'unknown-'"${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/wav/${name}".wav' |' >> "$datadir"/wav.scp
     done
     
     echo 'Create utt2spk'
