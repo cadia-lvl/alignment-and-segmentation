@@ -51,7 +51,7 @@ expdir="$exp"/h2/segmentation
 mfcc="$mfcc"
 
 if [ $stage -le 0 ]; then
-    mkdir -p "$datadir"/log "$expdir" "$mfcc"
+    mkdir -p "$datadir"/log "$expdir" "$mfcc" "$ruvdi"
     
     cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 fi
@@ -203,7 +203,7 @@ if [ $stage -le 7 ]; then
     done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
 fi
     
-if [ $stage -eq 8 ]; then
+if [ $stage -le 8 ]; then
     echo 'Process RUV diarization data, since it contains speaker information. Then I can compare the new segments'
     echo 'to the diarization segments and extract speaker information'
     
@@ -218,7 +218,7 @@ if [ $stage -eq 8 ]; then
     
     for path in "$ruvdi"/json/* ; do
         file=$(basename "$path")
-        python local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
+        python3 local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
     done
     
     for f in "$ruvdi"/*/ruvdi_segments; do (cat "${f}"; echo) >> "$ruvdi"/all_segments; done
