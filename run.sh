@@ -137,7 +137,7 @@ if [ $stage -le 5 ]; then
     utils/validate_data_dir.sh "${datadir}" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
-if [ $stage -eq 6 ]; then
+if [ $stage -le 6 ]; then
     # Estimate the OOV rate to see whether I need to update my lexicon
     # cut -d' ' -f2- "${datadir}"/text | tr ' ' '\n' | sort |uniq -c > "${datadir}"/words.cnt
     # comm -23 <(awk '$2 ~ /[[:print:]]/ { print $2 }' "${datadir}"/words.cnt | sort) <(cut -d" " -f1 $langdir/words.txt | sort) > "${datadir}"/vocab_text_only.tmp
@@ -151,7 +151,7 @@ if [ $stage -eq 6 ]; then
     --extractor "$extractor" \
     "$srcdir" "$langdir" \
     "${datadir}" "${datadir}"_segm_long \
-    "$expdir"/long &
+    "$expdir"/long
     
     utils/validate_data_dir.sh "${datadir}"_segm_long || utils/fix_data_dir.sh "${datadir}"_segm_long
     
@@ -163,7 +163,7 @@ if [ $stage -eq 6 ]; then
     "$expdir"/make_hires/ "$mfcc"
 fi
     
-if [ $stage -eq 7 ]; then
+if [ $stage -le 7 ]; then
     echo "Re-segment using an out-of-domain recognizer"
     utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
     steps/cleanup/clean_and_segment_data_nnet3.sh \
@@ -174,9 +174,9 @@ if [ $stage -eq 7 ]; then
     "${datadir}"_reseg &
     wait
     
-    # Calculae the duration of the new segments
+    # Calculate the duration of the new segments
     utils/data/get_utt2dur.sh "${datadir}"_reseg
-    awk '{sum = sum + $2}END{print sum, sum/NR}' "${datadir}"_reseg
+    awk '{sum = sum + $2}END{print sum, sum/NR}' "${datadir}"_reseg/utt2dur
     # Get 17494.2 seconds, i.e. around 4 hrs and 50 min, for Judy's ruv-di set. Average segment length is 4.3 sek
     # Sum of Judy's diarization segments is 25123.2 seconds or almost 7 hrs.
     # Original length of audio was 8.3 hrs
