@@ -268,6 +268,7 @@ if [ $stage -le 11 ]; then
     
     # Copy wav.scp over
     cp "${datadir}"_reseg/wav.scp "${datadir}"_final/wav.scp
+    sed -i 's/unknown-//' "${datadir}"_final/wav.scp
     
     echo 'Create spk2utt'
     utils/utt2spk_to_spk2utt.pl < "$datadir"_final/utt2spk > "$datadir"_final/spk2utt
