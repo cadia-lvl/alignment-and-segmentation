@@ -225,10 +225,10 @@ if [ $stage -le 8 ]; then
     grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_segments
 fi
     
-if [ $stage -eq 9 ]; then
+if [ $stage -le 9 ]; then
     # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
     echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
-    python local/switch_to_true_spkID.py \
+    python3 local/switch_to_true_spkID.py \
     --spkID_map "$ruvdi"/reco2spk_num2spk_label.csv \
     --diar_segments "$ruvdi"/all_segments \
     "$ruvdi"/all_segments_wspkID
