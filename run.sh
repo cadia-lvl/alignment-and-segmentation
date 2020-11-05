@@ -234,7 +234,7 @@ if [ $stage -le 9 ]; then
     "$ruvdi"/all_segments_wspkID
 fi
     
-if [ $stage -eq 10 ]; then
+if [ $stage -le 10 ]; then
     echo 'Assign speaker IDs from diarization data'
     python3 local/timestamp_comparison.py \
     --subtitle_segments_file "${datadir}"_reseg/segments \
@@ -243,11 +243,18 @@ if [ $stage -eq 10 ]; then
     --utt2spk_out "${datadir}"_final/utt2spk
 fi
     
-if [ $stage -eq 11 ]; then
+if [ $stage -le 11 ]; then
     echo 'Fix the spkIDs in the other files'
     
     echo 'Fix IDs in text'
-    # Keep lines in text where the (speaker removed) uttID exists in the final segments file
+    # Keep lines in text where the (speaker removed) uttID exists in the final
+    # segments file
+
+    # Unsetting exit on errors
+    # Need to make the script not exit on errors because if grep doesn't find
+    # anything then it probably exits on a non-zero code and therefore it
+    # doesn't continue the loop
+    set +e
     while IFS= read -r line
     do
         partID=$(echo "$line" | cut -d'-' -f2- | cut -d' ' -f1)
@@ -257,6 +264,7 @@ if [ $stage -eq 11 ]; then
             echo -e "$match $text" >> "${datadir}"_final/text
         fi
     done < "${datadir}"_reseg/text
+    set -e
     
     # Copy wav.scp over
     cp "${datadir}"_reseg/wav.scp "${datadir}"_final/wav.scp
