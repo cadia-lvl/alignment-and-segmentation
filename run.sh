@@ -81,6 +81,15 @@ if [ $stage -le 2 ]; then
         echo -e "${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/wav/${name}".wav' |' >> "$datadir"/wav.scp
     done
     
+    echo "Create a segments file"
+    while IFS= read -r line
+    do
+        name=$(basename "$line")
+        dur=$(soxi -D "$line")
+        number=$(LC_NUMERIC="en_US.UTF-8" printf "%.7g" "$dur")
+        echo -e unknown-"${name%.*}" "${name%.*}" 0 "$number" >> "$datadir"/segments
+    done < <(cut -d' ' -f12 "$datadir"/wav.scp)
+    
     echo 'Create utt2spk'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
@@ -121,7 +130,7 @@ if [ $stage -le 4 ]; then
     echo "Remove punctuations to make the text better fit for acoustic modelling."
     sed -re 's: [^A-ZÁÐÉÍÓÚÝÞÆÖa-záðéíóúýþæö ] : :g' -e 's: +: :g' \
     < "${datadir}"/text_expanded > "$datadir"/text || exit 1;
-
+    
     utils/validate_data_dir.sh --no-feats "$datadir" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
