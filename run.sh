@@ -68,10 +68,10 @@ fi
 
 if [ $stage -le 2 ]; then
     echo 'Create the files necessary for Kaldi'
-    echo 'Create segment and text files out of vtt subtitle files'
+    echo 'Create text files out of vtt subtitle files'
     for file in "$datadir"/vtt/*.vtt; do
         name=$(basename "$file")
-        python3 local/create_segments_and_text.py \
+        python3 local/extract_text.py \
         "$file" "$datadir"/transcripts/"${name%.*}"
     done
     
@@ -89,7 +89,7 @@ if [ $stage -le 2 ]; then
         number=$(LC_NUMERIC="en_US.UTF-8" printf "%.7g" "$dur")
         echo -e unknown-"${name%.*}" "${name%.*}" 0 "$number" >> "$datadir"/segments
     done < <(cut -d' ' -f12 "$datadir"/wav.scp)
-    
+
     echo 'Create utt2spk'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
@@ -123,6 +123,8 @@ if [ $stage -le 4 ]; then
     # NOTE! Fix the uttIDs
     sed -i -r 's/^(unknown) ([0-9]+) ([a-z]) ([0-9])/\1-\2\u\3\4/' "$datadir"/text_cleaned
     
+    # NOTE! We use code for the expansion that is not in the official Kaldi version. 
+    # TO DO: Extract those files from our Kaldi src dir and ship with this recipe
     echo 'Expand abbreviations and numbers'
     utils/slurm.pl --mem 4G "$datadir"/log/expand_text.log \
     local/expand_text.sh "$datadir"/text_cleaned "$datadir"/text_expanded
