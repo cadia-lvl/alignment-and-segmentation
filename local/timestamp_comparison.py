@@ -57,7 +57,7 @@ def file_path(path):
 
 def extract_spk(sub, spkdi, seg, utt2spk, collar):
     ids = sub[1].unique()
-    recoid_list = [id.split("-")[1] for id in ids]  # List of all recording IDs
+    recoid_list = ids  # List of all recording IDs
     for recoid in recoid_list:
         # Create new dataframes with only lines containing this recording ID
         spkdi_part = spkdi[spkdi[1].str.contains(recoid)]
