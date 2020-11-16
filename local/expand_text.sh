@@ -35,7 +35,7 @@ infile=$1
 outfile=$2
 dir=$(dirname "$infile");
 intermediate=$dir/intermediate
-mkdir -p "$intermediate", "$dir"/log
+mkdir -p "$intermediate" "$dir"/log
 
 for f in $infile "${base_norm_data}"/numbertexts_althingi100.txt.gz \
 "${text_norm_lex}"/abbr_lexicon.txt $base_norm_model/{baseLM_words.txt,base_expand_to_words.fst,base_expansionLM_"${order}"g.fst}; do
