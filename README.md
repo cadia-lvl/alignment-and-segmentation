@@ -9,6 +9,8 @@ They are dependent on [Kaldi](https://github.com/kaldi-asr/kaldi) and the
 unreleased Ruv-di dataset. These scripts assume there are speaker ids within
 the Ruv-di dataset.
 
+**NOTE!** We use code for the expansion that is not in the official Kaldi version. 
+**TO DO:** Extract those files from our Kaldi src dir and ship with this recipe
 
 ## Running
 1. To run the scripts, clone this directory in the Kaldi egs folder or just

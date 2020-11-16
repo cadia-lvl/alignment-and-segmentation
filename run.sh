@@ -68,19 +68,28 @@ fi
 
 if [ $stage -le 2 ]; then
     echo 'Create the files necessary for Kaldi'
-    echo 'Create segment and text files out of vtt subtitle files'
+    echo 'Create text files out of vtt subtitle files'
     for file in "$datadir"/vtt/*.vtt; do
         name=$(basename "$file")
-        python3 local/create_segments_and_text.py \
+        python3 local/extract_text.py \
         "$file" "$datadir"/transcripts/"${name%.*}"
     done
     
     echo 'Create wav.scp'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
-        echo -e 'unknown-'"${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/wav/${name}".wav' |' >> "$datadir"/wav.scp
+        echo -e "${name}"' sox -twav - -c1 -esigned -r16000 -G -twav - < '"$corpusdir/wav/${name}".wav' |' >> "$datadir"/wav.scp
     done
     
+    echo "Create a segments file"
+    while IFS= read -r line
+    do
+        name=$(basename "$line")
+        dur=$(soxi -D "$line")
+        number=$(LC_NUMERIC="en_US.UTF-8" printf "%.7g" "$dur")
+        echo -e unknown-"${name%.*}" "${name%.*}" 0 "$number" >> "$datadir"/segments
+    done < <(cut -d' ' -f12 "$datadir"/wav.scp)
+
     echo 'Create utt2spk'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
@@ -114,6 +123,8 @@ if [ $stage -le 4 ]; then
     # NOTE! Fix the uttIDs
     sed -i -r 's/^(unknown) ([0-9]+) ([a-z]) ([0-9])/\1-\2\u\3\4/' "$datadir"/text_cleaned
     
+    # NOTE! We use code for the expansion that is not in the official Kaldi version. 
+    # TO DO: Extract those files from our Kaldi src dir and ship with this recipe
     echo 'Expand abbreviations and numbers'
     utils/slurm.pl --mem 4G "$datadir"/log/expand_text.log \
     local/expand_text.sh "$datadir"/text_cleaned "$datadir"/text_expanded
@@ -121,7 +132,7 @@ if [ $stage -le 4 ]; then
     echo "Remove punctuations to make the text better fit for acoustic modelling."
     sed -re 's: [^A-ZÁÐÉÍÓÚÝÞÆÖa-záðéíóúýþæö ] : :g' -e 's: +: :g' \
     < "${datadir}"/text_expanded > "$datadir"/text || exit 1;
-
+    
     utils/validate_data_dir.sh --no-feats "$datadir" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
