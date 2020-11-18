@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Author: Inga Rún Helgadóttir
+
+# Apache 2.0
 
 import os
 import argparse
@@ -29,18 +32,21 @@ def parse_arguments():
 def file_path(path):
     if os.path.isfile(path):
         return path
-    else:
-        raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid file")
+    raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid file")
 
 
-# NOTE! Before i start assigning spkIDs. I need to use reco2spk_num2spk_info.csv to fix the speaker IDs in the ruv-di data, and then put all the segment data into one file
+# NOTE! Before i start assigning spkIDs. I need to use
+# reco2spk_num2spk_label.csv to fix the speaker IDs in the ruv-di data, and
+# then put all the segment data into one file
 def fix_spkID(meta, diar, seg):
     """Map the infile speaker IDs to the overall ones"""
     for diar_row in diar.itertuples(index=False):
         for meta_row in meta.itertuples(index=False):
-            if meta_row[0] == diar_row[3] and meta_row[1] == diar_row[0]:
+            # for some reason diar_row[0] is interpreted as a string even
+            # though it's only a number so converting it to an int
+            if meta_row[0] == diar_row[3] and meta_row[1] == int(diar_row[0]):
                 seg.write(
-                    f"{meta_row[2]}-{diar_row[1]} {meta_row[2]}-{diar_row[3]} {diar_row[4]} {diar_row[5]}\n"
+                    f"{meta_row[2]}-{diar_row[1]} {diar_row[3]} {diar_row[4]} {diar_row[5]}\n"
                 )
                 break
 
@@ -48,7 +54,8 @@ def fix_spkID(meta, diar, seg):
 def main():
     args = parse_arguments()
 
-    # use reco2spk_num2spk_label.csv to fix the speaker IDs in the ruv-di data, and then put all the segment data into one file
+    # use reco2spk_num2spk_label.csv to fix the speaker IDs in the ruv-di data,
+    # and then put all the segment data into one file
     meta = pd.read_table(args.spkID_map, header=None, sep=",")
     diar = pd.read_table(args.diar_segments, header=None, delim_whitespace=True,)
     with open(args.diar_segments_wspkID, "w") as seg:

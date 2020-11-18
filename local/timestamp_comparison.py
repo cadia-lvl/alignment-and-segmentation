@@ -25,6 +25,7 @@ def parse_arguments():
         "--collar",
         nargs="?",
         default=0.25,
+        type=float,
         help="How far outside the diarization segment (end timestamp) can the subtitle segment go in seconds",
     )
     parser.add_argument(
@@ -56,9 +57,8 @@ def file_path(path):
 
 
 def extract_spk(sub, spkdi, seg, utt2spk, collar):
-    ids = sub[1].unique()
-    recoid_list = [id.split("-")[1] for id in ids]  # List of all recording IDs
-    for recoid in recoid_list:
+    reco_ids = sub[1].unique()  # List of all recording IDs
+    for recoid in reco_ids:
         # Create new dataframes with only lines containing this recording ID
         spkdi_part = spkdi[spkdi[1].str.contains(recoid)]
         sub_part = sub[sub[1].str.contains(recoid)]
@@ -69,8 +69,8 @@ def extract_spk(sub, spkdi, seg, utt2spk, collar):
                 (spkdi_part[2] <= sub_row[2]) & ((spkdi_part[3] + collar) >= sub_row[3])
             ]
             if not dirows.empty:
-                spkid = str(dirows[1]).split("-")[0]  # Extract the spkID from the uttID
-                spkid2 = spkid.split()[1]
+                spkid = str(dirows[0]).split("-")[0]  # Extract the spkID from the uttID
+                spkid2 = spkid.split()[1]  # Otherwise line numbers come in front
                 sub_recoid, count = sub_row[0].split("-")[1:3]
                 seg.write(
                     f"{spkid2}-{sub_recoid}-{count} {sub_recoid} {sub_row[2]} {sub_row[3]}\n"
@@ -83,7 +83,7 @@ def main():
 
     output_segments = args.segments_out
     outdir = os.path.dirname(output_segments)
-    Path(outdir).mkdir()
+    Path(outdir).mkdir(parents=True)
 
     sub = pd.read_table(args.subtitle_segments_file, header=None, sep="\s+")
     spkdi = pd.read_table(args.diar_segments_wspkID, header=None, sep="\s+")

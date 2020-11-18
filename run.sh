@@ -51,7 +51,7 @@ expdir="$exp"/h2/segmentation
 mfcc="$mfcc"
 
 if [ $stage -le 0 ]; then
-    mkdir -p "$datadir"/log "$expdir" "$mfcc"
+    mkdir -p "$datadir"/log "$expdir" "$mfcc" "$ruvdi"
     
     cp $corpusdir/reco2spk_num2spk_label.csv "$ruvdi"
 fi
@@ -89,7 +89,7 @@ if [ $stage -le 2 ]; then
         number=$(LC_NUMERIC="en_US.UTF-8" printf "%.7g" "$dur")
         echo -e unknown-"${name%.*}" "${name%.*}" 0 "$number" >> "$datadir"/segments
     done < <(cut -d' ' -f12 "$datadir"/wav.scp)
-
+    
     echo 'Create utt2spk'
     for path in "$datadir"/transcripts/*; do
         name=$(basename "$path")
@@ -123,7 +123,7 @@ if [ $stage -le 4 ]; then
     # NOTE! Fix the uttIDs
     sed -i -r 's/^(unknown) ([0-9]+) ([a-z]) ([0-9])/\1-\2\u\3\4/' "$datadir"/text_cleaned
     
-    # NOTE! We use code for the expansion that is not in the official Kaldi version. 
+    # NOTE! We use code for the expansion that is not in the official Kaldi version.
     # TO DO: Extract those files from our Kaldi src dir and ship with this recipe
     echo 'Expand abbreviations and numbers'
     utils/slurm.pl --mem 4G "$datadir"/log/expand_text.log \
@@ -173,7 +173,7 @@ if [ $stage -le 6 ]; then
     "${datadir}"_segm_long \
     "$expdir"/make_hires/ "$mfcc"
 fi
-    
+
 if [ $stage -le 7 ]; then
     echo "Re-segment using an out-of-domain recognizer"
     utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
@@ -213,8 +213,8 @@ if [ $stage -le 7 ]; then
         i=$((i+1))
     done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
 fi
-    
-if [ $stage -eq 8 ]; then
+
+if [ $stage -le 8 ]; then
     echo 'Process RUV diarization data, since it contains speaker information. Then I can compare the new segments'
     echo 'to the diarization segments and extract speaker information'
     
@@ -229,23 +229,23 @@ if [ $stage -eq 8 ]; then
     
     for path in "$ruvdi"/json/* ; do
         file=$(basename "$path")
-        python local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
+        python3 local/parse_json.py "$ruvdi"/json/"$file" "$ruvdi"
     done
     
     for f in "$ruvdi"/*/ruvdi_segments; do (cat "${f}"; echo) >> "$ruvdi"/all_segments; done
     grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_segments
 fi
-    
-if [ $stage -eq 9 ]; then
+
+if [ $stage -le 9 ]; then
     # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
     echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
-    python local/switch_to_true_spkID.py \
+    python3 local/switch_to_true_spkID.py \
     --spkID_map "$ruvdi"/reco2spk_num2spk_label.csv \
     --diar_segments "$ruvdi"/all_segments \
     "$ruvdi"/all_segments_wspkID
 fi
-    
-if [ $stage -eq 10 ]; then
+
+if [ $stage -le 10 ]; then
     echo 'Assign speaker IDs from diarization data'
     python3 local/timestamp_comparison.py \
     --subtitle_segments_file "${datadir}"_reseg/segments \
@@ -253,12 +253,19 @@ if [ $stage -eq 10 ]; then
     --segments_out "${datadir}"_final/segments \
     --utt2spk_out "${datadir}"_final/utt2spk
 fi
-    
-if [ $stage -eq 11 ]; then
+
+if [ $stage -le 11 ]; then
     echo 'Fix the spkIDs in the other files'
     
     echo 'Fix IDs in text'
-    # Keep lines in text where the (speaker removed) uttID exists in the final segments file
+    # Keep lines in text where the (speaker removed) uttID exists in the final
+    # segments file
+    
+    # Unsetting exit on errors
+    # Need to make the script not exit on errors because if grep doesn't find
+    # anything then it probably exits on a non-zero code and therefore it
+    # doesn't continue the loop
+    set +e
     while IFS= read -r line
     do
         partID=$(echo "$line" | cut -d'-' -f2- | cut -d' ' -f1)
@@ -268,6 +275,7 @@ if [ $stage -eq 11 ]; then
             echo -e "$match $text" >> "${datadir}"_final/text
         fi
     done < "${datadir}"_reseg/text
+    set -e
     
     # Copy wav.scp over
     cp "${datadir}"_reseg/wav.scp "${datadir}"_final/wav.scp
