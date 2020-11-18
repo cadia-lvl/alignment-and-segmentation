@@ -121,7 +121,7 @@ if [ $stage -le 4 ]; then
     echo "Remove punctuations to make the text better fit for acoustic modelling."
     sed -re 's: [^A-ZÁÐÉÍÓÚÝÞÆÖa-záðéíóúýþæö ] : :g' -e 's: +: :g' \
     < "${datadir}"/text_expanded > "$datadir"/text || exit 1;
-
+    
     utils/validate_data_dir.sh --no-feats "$datadir" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
@@ -162,7 +162,7 @@ if [ $stage -le 6 ]; then
     "${datadir}"_segm_long \
     "$expdir"/make_hires/ "$mfcc"
 fi
-    
+
 if [ $stage -le 7 ]; then
     echo "Re-segment using an out-of-domain recognizer"
     utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
@@ -202,7 +202,7 @@ if [ $stage -le 7 ]; then
         i=$((i+1))
     done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
 fi
-    
+
 if [ $stage -le 8 ]; then
     echo 'Process RUV diarization data, since it contains speaker information. Then I can compare the new segments'
     echo 'to the diarization segments and extract speaker information'
@@ -224,7 +224,7 @@ if [ $stage -le 8 ]; then
     for f in "$ruvdi"/*/ruvdi_segments; do (cat "${f}"; echo) >> "$ruvdi"/all_segments; done
     grep -Ev '^$' "$ruvdi"/all_segments | tr '-' ' ' > tmp && mv tmp "$ruvdi"/all_segments
 fi
-    
+
 if [ $stage -le 9 ]; then
     # NOTE I need to make changes because of how segment_long_utterances_nnet3.sh treats speaker IDs and suffices!
     echo 'Change the file dependent speaker IDs to the constant speaker IDs for the diarization data'
@@ -233,7 +233,7 @@ if [ $stage -le 9 ]; then
     --diar_segments "$ruvdi"/all_segments \
     "$ruvdi"/all_segments_wspkID
 fi
-    
+
 if [ $stage -le 10 ]; then
     echo 'Assign speaker IDs from diarization data'
     python3 local/timestamp_comparison.py \
@@ -242,14 +242,14 @@ if [ $stage -le 10 ]; then
     --segments_out "${datadir}"_final/segments \
     --utt2spk_out "${datadir}"_final/utt2spk
 fi
-    
+
 if [ $stage -le 11 ]; then
     echo 'Fix the spkIDs in the other files'
     
     echo 'Fix IDs in text'
     # Keep lines in text where the (speaker removed) uttID exists in the final
     # segments file
-
+    
     # Unsetting exit on errors
     # Need to make the script not exit on errors because if grep doesn't find
     # anything then it probably exits on a non-zero code and therefore it

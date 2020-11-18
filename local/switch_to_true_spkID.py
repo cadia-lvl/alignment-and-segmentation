@@ -46,7 +46,7 @@ def fix_spkID(meta, diar, seg):
             # though it's only a number so converting it to an int
             if meta_row[0] == diar_row[3] and meta_row[1] == int(diar_row[0]):
                 seg.write(
-                    f"{meta_row[2]}-{diar_row[1]} {meta_row[2]}-{diar_row[3]} {diar_row[4]} {diar_row[5]}\n"
+                    f"{meta_row[2]}-{diar_row[1]} {diar_row[3]} {diar_row[4]} {diar_row[5]}\n"
                 )
                 break
 
