@@ -25,7 +25,7 @@ stage=0
 srcdir=/models/althingi/acoustic_model/chain/5.4/tdnn/20190114
 langdir=$srcdir/lmdir/lang
 extractor=$srcdir/extractor
-corpusdir=/data/ruv-di/version0001
+corpusdir=/data/misc/ruv-di/version0001
 
 . ./path.sh
 . ./cmd.sh
