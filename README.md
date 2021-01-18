@@ -1,5 +1,5 @@
-# H2 - alignment system
-These are the scripts for preparing the RÚV TV material for ASR.
+# Alignment system for RÚV TV data and segmentation system for CreditInfo data
+These are the scripts for preparing the RÚV TV material and the radio CreditInfo data for ASR
 
 ## Table of Contents
 [Easy to use TOC generator](https://ecotrust-canada.github.io/markdown-toc/)
@@ -9,10 +9,10 @@ They are dependent on [Kaldi](https://github.com/kaldi-asr/kaldi) and the
 unreleased Ruv-di dataset. These scripts assume there are speaker ids within
 the Ruv-di dataset.
 
-**NOTE!** We use code for the expansion that is not in the official Kaldi version. 
+**NOTE! Work in progress.** We use code for the expansion that is not in the official Kaldi version. 
 **TO DO:** Extract those files from our Kaldi src dir and ship with this recipe
 
-## Running
+## Running the alignment scripts 
 1. To run the scripts, clone this directory in the Kaldi egs folder or just
 make sure  that path.sh points to your working version of kaldi.
 
