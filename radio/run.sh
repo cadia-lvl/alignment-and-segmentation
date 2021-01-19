@@ -72,8 +72,7 @@ if [ $stage -le 1 ]; then
     grep -v '^ * *$' $input_tsv \
     | sed -r 's/^([A-ZAÐEIOUYÞÆÖ]{2,3})$/[\1]/g' \
     | grep -v '^ * *$' | tr '\n' ' ' \
-    | sed -re 's/ {5,}/\n/g' \
-    -e 's/^ +//' \
+    | sed -re 's/ {5,}/\n/g' -e 's/^ * *//' \
     -e 's/Rás 1 9/ras1_9/g' -e  's/Rás 2 9/ras2_9/g' \
     -e 's/\.ts/.wav/' \
     -e 's/(kk|kvk)([0-9]) /\1\2. /g' \
@@ -136,102 +135,102 @@ if [ $stage -le 2 ]; then
 fi
 
 
-# if [ $stage -le 4 ]; then
-#     if [ ! -d "$langdir" ]; then
-#         echo "Create the lexicon"
-#         [ -d data/local/dict ] && rm -r data/local/dict
-#         mkdir -p data/local "$langdir"/log
-#         utils/slurm.pl --mem 4G "$langdir"/log/prep_lang.log \
-#         local/prep_lang.sh \
-#         $prondict \
-#         data/local/dict \
-#         "$langdir"
-#     fi
-# fi
+if [ $stage -le 4 ]; then
+    if [ ! -d "$langdir" ]; then
+        echo "Create the lexicon"
+        [ -d data/local/dict ] && rm -r data/local/dict
+        mkdir -p data/local "$langdir"/log
+        utils/slurm.pl --mem 4G "$langdir"/log/prep_lang.log \
+        local/prep_lang.sh \
+        $prondict \
+        data/local/dict \
+        "$langdir"
+    fi
+fi
 
-# if [ $stage -le 5 ]; then
-
-#     echo "I need to train an acoustic model, since the new phones,"
-#     echo "from the tags, cause mismatch in the phone list"
-#     echo "Train on Samromur data"
-
-#     echo "Preparing a pruned trigram language model"
-#     mkdir -p data/log
-#     utils/slurm.pl --mem 24G data/log/make_LM_3g.log \
-#     local/make_LM.sh \
-#     --order 3 --carpa false \
-#     --min1cnt 20 --min1cnt 10 --min3cnt 2 \
-#     $lm_trainingset data/lang \
-#     data/local/dict/lexicon.txt data \
-#     || error 1 "Failed creating a pruned trigram language model"
-
-#     echo "Train a mono system"
-#     steps/train_mono.sh    \
-#     --nj $num_jobs           \
-#     --cmd "$train_cmd" \
-#     --totgauss 4000    \
-#     $samromur_data/train_5kshort \
-#     data/lang          \
-#     exp/mono
-
-#     echo "mono alignment. Align train_10k to mono"
-#     steps/align_si.sh \
-#     --nj $num_jobs --cmd "$train_cmd" \
-#     $samromur_data/train_10k data/lang exp/mono exp/mono_ali
-
-#     echo "first triphone training"
-#     steps/train_deltas.sh  \
-#     --cmd "$train_cmd" \
-#     2000 10000         \
-#     $samromur_data/train_10k data/lang exp/mono_ali exp/tri1
-
-#     echo "Aligning train_20k to tri1"
-#     steps/align_si.sh \
-#     --nj $num_jobs --cmd "$train_cmd" \
-#     $samromur_data/train_20k data/lang \
-#     exp/tri1 exp/tri1_ali
-
-#     echo "Training LDA+MLLT system tri2"
-#     steps/train_lda_mllt.sh \
-#     --cmd "$train_cmd" \
-#     --splice-opts "--left-context=3 --right-context=3" \
-#     3000 25000 \
-#     $samromur_data/train_20k data/lang \
-#     exp/tri1_ali exp/tri2
-
-#     echo "Aligning train_40k to tri2"
-#     steps/align_si.sh \
-#     --nj $num_jobs --cmd "$train_cmd" \
-#     $samromur_data/train_40k data/lang \
-#     exp/tri2 exp/tri2_ali
-
-#     echo "Train LDA + MLLT + SAT"
-#     steps/train_sat.sh    \
-#     --cmd "$train_cmd" \
-#     4000 40000    \
-#     $samromur_data/train_40k data/lang     \
-#     exp/tri2_ali exp/tri3
-
-#     echo "Third triphone decoding"
-#     utils/mkgraph.sh data/lang_3g exp/tri3 exp/tri3/graph
-
-#     for dir in eval test; do
-#         (
-#             steps/decode_fmllr.sh \
-#             --config conf/decode.config \
-#             --nj "$nj_decode" --cmd "$decode_cmd" \
-#             exp/tri3/graph $samromur_data/$dir \
-#             exp/tri3/decode_$dir;
-
-#             steps/lmrescore_const_arpa.sh \
-#             --cmd "$decode_cmd" \
-#             data/lang_{3g,4g} $samromur_data/$dir \
-#             exp/tri3/decode_$dir \
-#             exp/tri3/decode_${dir}_rescored
-#         ) &
-#     done
-#     wait
-# fi
+if [ $stage -le 5 ]; then
+    
+    echo "I need to train an acoustic model, since the new phones,"
+    echo "from the tags, cause mismatch in the phone list"
+    echo "Train on Samromur data"
+    
+    echo "Preparing a pruned trigram language model"
+    mkdir -p data/log
+    utils/slurm.pl --mem 24G data/log/make_LM_3g.log \
+    local/make_LM.sh \
+    --order 3 --carpa false \
+    --min1cnt 20 --min1cnt 10 --min3cnt 2 \
+    $lm_trainingset data/lang \
+    data/local/dict/lexicon.txt data \
+    || error 1 "Failed creating a pruned trigram language model"
+    
+    echo "Train a mono system"
+    steps/train_mono.sh    \
+    --nj $num_jobs           \
+    --cmd "$train_cmd" \
+    --totgauss 4000    \
+    $samromur_data/train_5kshort \
+    data/lang          \
+    exp/mono
+    
+    echo "mono alignment. Align train_10k to mono"
+    steps/align_si.sh \
+    --nj $num_jobs --cmd "$train_cmd" \
+    $samromur_data/train_10k data/lang exp/mono exp/mono_ali
+    
+    echo "first triphone training"
+    steps/train_deltas.sh  \
+    --cmd "$train_cmd" \
+    2000 10000         \
+    $samromur_data/train_10k data/lang exp/mono_ali exp/tri1
+    
+    echo "Aligning train_20k to tri1"
+    steps/align_si.sh \
+    --nj $num_jobs --cmd "$train_cmd" \
+    $samromur_data/train_20k data/lang \
+    exp/tri1 exp/tri1_ali
+    
+    echo "Training LDA+MLLT system tri2"
+    steps/train_lda_mllt.sh \
+    --cmd "$train_cmd" \
+    --splice-opts "--left-context=3 --right-context=3" \
+    3000 25000 \
+    $samromur_data/train_20k data/lang \
+    exp/tri1_ali exp/tri2
+    
+    echo "Aligning train_40k to tri2"
+    steps/align_si.sh \
+    --nj $num_jobs --cmd "$train_cmd" \
+    $samromur_data/train_40k data/lang \
+    exp/tri2 exp/tri2_ali
+    
+    echo "Train LDA + MLLT + SAT"
+    steps/train_sat.sh    \
+    --cmd "$train_cmd" \
+    4000 40000    \
+    $samromur_data/train_40k data/lang     \
+    exp/tri2_ali exp/tri3
+    
+    echo "Third triphone decoding"
+    utils/mkgraph.sh data/lang_3g exp/tri3 exp/tri3/graph
+    
+    for dir in eval test; do
+        (
+            steps/decode_fmllr.sh \
+            --config conf/decode.config \
+            --nj "$nj_decode" --cmd "$decode_cmd" \
+            exp/tri3/graph $samromur_data/$dir \
+            exp/tri3/decode_$dir;
+            
+            steps/lmrescore_const_arpa.sh \
+            --cmd "$decode_cmd" \
+            data/lang_{3g,4g} $samromur_data/$dir \
+            exp/tri3/decode_$dir \
+            exp/tri3/decode_${dir}_rescored
+        ) &
+    done
+    wait
+fi
 
 
 if [ $stage -le 6 ]; then
@@ -258,10 +257,6 @@ if [ $stage -le 7 ]; then
     exp/tri2_full exp/tri2_full_cleanup \
     "${datadir}"_reseg &
     wait
-    
-    # local/run_segmentation.sh \
-    # "$datadir" data/lang \
-    # exp/tri3_full "${datadir}"_reseg2 &
     
 fi
 
