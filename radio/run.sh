@@ -35,6 +35,8 @@ if [ "$1" == "-h" ]; then
     exit 0
 fi
 
+# Maybe I should let input_xlsx and the delivery date become variables that I read in
+
 prondict=/models/samromur/prondict_w_samromur.txt
 lm_trainingset=/models/samromur/rmh_2020-11-23_uniq.txt
 
@@ -69,12 +71,13 @@ if [ $stage -le 1 ]; then
     # 7) Fix missing period after gender-age
     # 8-16) Standardize tags
     # ) Switch spaces to one between words
-    grep -v '^ * *$' $input_tsv \
+    TAB=$'\t'
+    grep -Ev '^ *$' $input_tsv \
     | sed -r 's/^([A-ZAÐEIOUYÞÆÖ]{2,3})$/[\1]/g' \
-    | grep -v '^ * *$' | tr '\n' ' ' \
-    | sed -re 's/ {5,}/\n/g' -e 's/^ * *//' \
+    | tr '\n' ' ' \
+    | sed -re 's/'"${TAB}"'{5,}/\n/g' -e 's/^ '"${TAB}"'//g' \
     -e 's/Rás 1 9/ras1_9/g' -e  's/Rás 2 9/ras2_9/g' \
-    -e 's/\.ts/.wav/' \
+    -e 's/\.ts/.wav/g' \
     -e 's/(kk|kvk)([0-9]) /\1\2. /g' \
     -e 's/<n>/<noise>/g' -e 's/<haha>/<laughter>/g' \
     -e 's/<hst>/<coughing>/g' \
