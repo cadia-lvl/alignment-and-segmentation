@@ -1,0 +1,1 @@
+../../TV_subtitle/local/extract_text.py

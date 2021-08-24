@@ -1,0 +1,1 @@
+../../TV_subtitle/local/clean_text.sh
