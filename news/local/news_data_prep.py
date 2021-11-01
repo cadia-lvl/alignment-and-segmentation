@@ -6,11 +6,12 @@
 # 1. create wav.scp (ffmpeg -i video audio.flac) : look at
 # ~/repos/extract-data/ruv/airdate2title2media2text.csv to get the text and
 # video files, get the full path using json/show_dirs.json
+# 2. create utt2spk
 
 # TODO: 2. look at ~/repos/extract-data/ruv/airdate2title2media2text.csv to get
 # the text and video files, for full path then use json/show_dirs.json
 
-# TODO: create raw_text, segments, utt2spk etc
+# TODO: create raw_text, segments, etc
 # TODO: get audio length in seconds
 
 # examples:
@@ -38,18 +39,26 @@ def main(shows, media2text):
     data_root = '/data/misc/ruv_unprocessed/'
     # open csv file
     with open(media2text, 'r') as audio_text, \
-    open('data/tempwav.scp', 'w') as wav_scp:
+    open('data/tempwav.scp', 'w') as wav_scp, \
+    open('data/temputt2spk', 'w') as utt2spk, \
+    open('data/tempraw_text', 'w') as raw_text:
         datareader = csv.reader(audio_text, delimiter=',')
         for row in datareader:
             # Use the numerical part [:7] of the filename BEFORE the letter as
             # the partial utterance id
             utt_id = 'NEWS-{}'.format(row[2][:7])
+
+            audiolength = 0
+
             # wav.scp
-            print('{} ffmpeg -i < {}{}/{} |'.format(utt_id, data_root,
+            print('{} ffmpeg -i < {}{}/{} |'.format(row[2][:7], data_root,
             current_show['video_dir'], row[2]), file=wav_scp)
             # utt2spk
-            print('{} {}'.format(utt_id, utt_id))
-            print(row[2][:7], row[3])
+            print('{} {}'.format(utt_id, utt_id), file=utt2spk)
+            # TODO almost segments
+            print('{} {} 0 {}'.format(utt_id, row[2][:7], audiolength))
+            # TODO almost text
+            print('{} {}'.format(utt_id, row[3]))
 
 if __name__ == '__main__':
     # this portion is run when this file is called directly by the command line
