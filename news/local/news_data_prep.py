@@ -30,6 +30,7 @@
 
 import csv
 import json
+import re
 
 def main(shows, media2text):
     episodes = {}
@@ -48,17 +49,19 @@ def main(shows, media2text):
             # the partial utterance id
             utt_id = 'NEWS-{}'.format(row[2][:7])
 
-            audiolength = 0
-
             # wav.scp
             print('{} ffmpeg -i < {}{}/{} |'.format(row[2][:7], data_root,
             current_show['video_dir'], row[2]), file=wav_scp)
             # utt2spk
             print('{} {}'.format(utt_id, utt_id), file=utt2spk)
+            # raw_text, still need to normalize it before it becomes text
+            text_file = data_root + current_show['text_dir'] + '/' + row[3]
+            with open(text_file) as f:
+                condensed_output = ' '.join(f.read().split())
+            print('{} {}'.format(utt_id, condensed_output), file=raw_text)
             # TODO almost segments
-            print('{} {} 0 {}'.format(utt_id, row[2][:7], audiolength))
-            # TODO almost text
-            print('{} {}'.format(utt_id, row[3]))
+            audio_length = 0
+            print('{} {} 0 {}'.format(utt_id, row[2][:7], audio_length))
 
 if __name__ == '__main__':
     # this portion is run when this file is called directly by the command line
