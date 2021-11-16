@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 
 # Copyright 2021 Judy Fong (Reykjavík University) - lvl@judyyfong.xyz
+# This is based on the run.sh script made by inga in the TV_subtitles recipe
 #           2020 Inga Rún Helgadóttir
 
 # License Apache 2.0
 
 # Description: Get the news data in the format that Kaldi wants before aligning
-# and segmenting the data. Start by using teleprompter/888 data but since
-# there are no timestamps, put all the text together and resegment. There are no speaker IDs so for the segmentation use a single speaker ID per audio file and see whether that will be good enough.
+# and segmenting the data. Start by using teleprompter/888 data but since there
+# are no timestamps, put all the text together and resegment. There are no
+# speaker IDs so for the segmentation use a single speaker ID per audio file
+# and see whether that will be good enough.
+# The utterance ids are only the first 7 digits of an episode number since the
+# original episode numbers/event ids have a variable length but kaldi want a
+# standard length.
 
 # Run from the H2 directory
 
@@ -76,3 +82,108 @@ if [ $stage -le 1 ]; then
 fi
 
 # TODO: start on stage 4 of the run script and get stages from there
+if [ $normalize ] && [ $stage -le 2 ] ; then
+  echo 'Clean the text'
+  utils/slurm.pl --mem 4G "$datadir"/log/clean_text.log \
+  local/clean_text.sh "$datadir"/raw_text "$datadir"/text_cleaned &
+  wait
+  # NOTE! Fix the uttIDs
+  sed -i -r 's/^(unknown) ([0-9]+)/\1-\2/' "$datadir"/text_cleaned
+  # NOTE! We use code for the expansion that is not in the official Kaldi version.
+  # TO DO: Extract those files from our Kaldi src dir and ship with this recipe
+  echo 'Expand abbreviations and numbers'
+  utils/slurm.pl --mem 4G "$datadir"/log/expand_text.log \
+  local/expand_text.sh "$datadir"/text_cleaned "$datadir"/text_expanded
+
+  echo "Remove punctuations to make the text better fit for acoustic modelling."
+  sed -re 's: [^A-ZÁÐÉÍÓÚÝÞÆÖa-záðéíóúýþæö ] : :g' -e 's: +: :g' \
+  < "${datadir}"/text_expanded > "$datadir"/text || exit 1;
+
+  utils/validate_data_dir.sh --no-feats "$datadir" || utils/fix_data_dir.sh "${datadir}" || exit 1;
+elif [ $stage -le 2 ]; then
+  cp "$datadir"/raw_text "$datadir"/text
+
+fi
+
+if [ $stage -le 3 ]; then
+  echo "Extract high resolution features which are used with Kaldi's nnet models"
+  steps/make_mfcc.sh \
+  --nj 60 \
+  --mfcc-config conf/mfcc_hires.conf \
+  --cmd "$decode_cmd" \
+  "${datadir}" \
+  "$expdir"/make_hires/ "$mfcc"
+
+  utils/validate_data_dir.sh "${datadir}" || utils/fix_data_dir.sh "${datadir}" || exit 1;
+fi
+
+if [ $stage -eq 4 ]; then
+  # Estimate the OOV rate to see whether I need to update my lexicon
+  cut -d' ' -f2- "${datadir}"/text | tr ' ' '\n' | sort |uniq -c > "${datadir}"/words.cnt
+  comm -23 <(awk '$2 ~ /[[:print:]]/ { print $2 }' "${datadir}"/words.cnt | sort) <(cut -d" " -f1 $langdir/words.txt | sort) > "${datadir}"/vocab_text_only.tmp
+  join -1 1 -2 1 "${datadir}"/vocab_text_only.tmp <(awk '$2 ~ /[[:print:]]/ { print $2" "$1 }' ${datadir}/words.cnt | sort -k1,1) | sort | awk '{total = total + $2}END{print "OOV: " total}'
+  cat data/one-news-data/words.cnt | awk '{total = total + $1}END{print "total words: " total}'
+  # What is the OOV rate?
+  # Get 2.7% OOV rate. I think under 3% is ok.
+
+fi
+
+if [ $stage -eq 5 ]; then
+  echo "Create crude shorter segments using an out-of-domain recognizer"
+  utils/slurm.pl --mem 8G "$datadir"/log/segmentation_long_utterances.log \
+  steps/cleanup/segment_long_utterances_nnet3.sh \
+  --nj 20 \
+  --extractor "$extractor" \
+  "$srcdir" "$langdir" \
+  "${datadir}" "${datadir}"_segm_long \
+  "$expdir"/long
+
+  utils/validate_data_dir.sh "${datadir}"_segm_long || utils/fix_data_dir.sh "${datadir}"_segm_long
+
+  steps/make_mfcc.sh \
+  --nj 20 \
+  --mfcc-config conf/mfcc_hires.conf \
+  --cmd "$decode_cmd" \
+  "${datadir}"_segm_long \
+  "$expdir"/make_hires/ "$mfcc"
+fi
+
+if [ $stage -eq 6 ]; then
+  echo "Re-segment using an out-of-domain recognizer"
+  utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
+  steps/cleanup/clean_and_segment_data_nnet3.sh \
+  --nj 20 \
+  --extractor "$extractor" \
+  "${datadir}"_segm_long "$langdir" \
+  "$srcdir" "$expdir" \
+  "${datadir}"_reseg &
+  wait
+
+  # Calculate the duration of the new segments
+  utils/data/get_utt2dur.sh "${datadir}"_reseg
+  awk '{sum = sum + $2}END{print sum, sum/NR}' "${datadir}"_reseg/utt2dur
+  # Get 2609 seconds, i.e. around 43 min.  Average segment length is ?? sek
+  # Original length of audio was ?? hrs
+
+  # The segmentation process created very long suffices on the utterance IDs.
+  # Shorten them. I can do that since these are not coupled to real speaker IDs.
+  mv "${datadir}"_reseg/segments "${datadir}"_reseg/segments_orig
+  i=0
+  while IFS= read -r line
+  do
+    printf -v j "%05d" "$i" # Pad the suffix with zeros
+    echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/segments
+    i=$((i+1))
+  done < <(grep -v '^ *#' < "${datadir}"_reseg/segments_orig)
+
+  # Change the suffices in text as well
+  mv "${datadir}"_reseg/text "${datadir}"_reseg/text_orig
+  i=0
+  while IFS= read -r line
+  do
+    printf -v j "%05d" "$i" # Pad the suffix with zeros
+    echo "$line" | sed -r "s/^(unknown-[^-]+)[^ ]+/\1-$j/" >> "${datadir}"_reseg/text
+    i=$((i+1))
+  done < <(grep -v '^ *#' < "${datadir}"_reseg/text_orig)
+fi
+

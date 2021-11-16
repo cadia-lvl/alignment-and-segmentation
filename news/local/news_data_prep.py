@@ -92,7 +92,10 @@ def main(shows, media2text, outdir):
                 continue
 
             # wav.scp
-            print('{} ffmpeg -i {}{}/{} -f wav - |'.format(row[2][:7], data_root,
+            # Use only the first channel since it's just two mono channels and
+            # kaldi expects one channel. Also specify 16kHz because kaldi also
+            # expects that in this recipe
+            print('{} ffmpeg -i {}{}/{} -ac 1 -ar 16k -f wav - |'.format(row[2][:7], data_root,
                   current_show['video_dir'], row[2]), file=wav_scp)
             # utt2spk
             print('{} {}'.format(utt_id, utt_id), file=utt2spk)
