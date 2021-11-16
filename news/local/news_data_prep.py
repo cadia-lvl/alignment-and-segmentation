@@ -67,6 +67,16 @@ def main(shows, media2text, outdir):
     current_show = [ show for show in shows['shows'] if show['name'] == 'Fréttir kl 1900'][0]
     print (current_show)
     data_root = '/data/misc/ruv_unprocessed/'
+
+    # TODO: non expandable text in these utterance ids for some reason
+    non_expandable = ['unknown-5004139',
+                      'unknown-5004165',
+                      'unknown-4942730',
+                      'unknown-4942878',
+                      'unknown-4942882',
+                      'unknown-4942883'
+                      ]
+
     # open csv file
     with open(media2text, 'r') as audio_text, \
     open(outdir + '/wav.scp', 'w') as wav_scp, \
@@ -78,9 +88,11 @@ def main(shows, media2text, outdir):
             # Use the numerical part [:7] of the filename BEFORE the letter as
             # the partial utterance id
             utt_id = 'unknown-{}'.format(row[2][:7])
+            if utt_id in non_expandable:
+                continue
 
             # wav.scp
-            print('{} ffmpeg -i < {}{}/{} |'.format(row[2][:7], data_root,
+            print('{} ffmpeg -i {}{}/{} -f wav - |'.format(row[2][:7], data_root,
                   current_show['video_dir'], row[2]), file=wav_scp)
             # utt2spk
             print('{} {}'.format(utt_id, utt_id), file=utt2spk)
