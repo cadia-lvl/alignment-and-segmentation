@@ -53,8 +53,9 @@ fi
 . utils/parse_options.sh || exit 1;
 
 # NOTE! change path for $data, $exp and $mfcc in conf/path.conf
-datadir="$data"/news-data
-expdir="$exp"/news-data/segmentation
+corpusname=news-data
+datadir="$data"/"$corpusname"
+expdir="$exp"/"$corpusname"/segmentation
 mfcc="$mfcc"
 
 # Test the existance of input data and models
@@ -117,12 +118,12 @@ if [ $stage -le 3 ]; then
   utils/validate_data_dir.sh "${datadir}" || utils/fix_data_dir.sh "${datadir}" || exit 1;
 fi
 
-if [ $stage -eq 4 ]; then
+if [ $stage -le 4 ]; then
   # Estimate the OOV rate to see whether I need to update my lexicon
   cut -d' ' -f2- "${datadir}"/text | tr ' ' '\n' | sort |uniq -c > "${datadir}"/words.cnt
   comm -23 <(awk '$2 ~ /[[:print:]]/ { print $2 }' "${datadir}"/words.cnt | sort) <(cut -d" " -f1 $langdir/words.txt | sort) > "${datadir}"/vocab_text_only.tmp
   join -1 1 -2 1 "${datadir}"/vocab_text_only.tmp <(awk '$2 ~ /[[:print:]]/ { print $2" "$1 }' ${datadir}/words.cnt | sort -k1,1) | sort | awk '{total = total + $2}END{print "OOV: " total}'
-  cat data/one-news-data/words.cnt | awk '{total = total + $1}END{print "total words: " total}'
+  cat "$datadir"/words.cnt | awk '{total = total + $1}END{print "total words: " total}'
   # What is the OOV rate?
   # Get 2.7% OOV rate. I think under 3% is ok.
 
