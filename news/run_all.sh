@@ -129,15 +129,16 @@ if [ $stage -le 4 ]; then
 
 fi
 
-if [ $stage -eq 5 ]; then
+if [ $stage -le 5 ]; then
   echo "Create crude shorter segments using an out-of-domain recognizer"
-  utils/slurm.pl --mem 8G "$datadir"/log/segmentation_long_utterances.log \
   steps/cleanup/segment_long_utterances_nnet3.sh \
   --nj 20 \
   --extractor "$extractor" \
+  --cmd "$decode_cmd" \
   "$srcdir" "$langdir" \
   "${datadir}" "${datadir}"_segm_long \
   "$expdir"/long
+#  "$datadir"/log/segmentation_long_utterances.log
 
   utils/validate_data_dir.sh "${datadir}"_segm_long || utils/fix_data_dir.sh "${datadir}"_segm_long
 
