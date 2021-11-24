@@ -150,10 +150,11 @@ if [ $stage -le 5 ]; then
   "$expdir"/make_hires/ "$mfcc"
 fi
 
-if [ $stage -eq 6 ]; then
+if [ $stage -le 6 ]; then
   echo "Re-segment using an out-of-domain recognizer"
   utils/slurm.pl --mem 8G "$datadir"/log/segmentation.log \
   steps/cleanup/clean_and_segment_data_nnet3.sh \
+  --cmd "$decode_cmd" \
   --nj 20 \
   --extractor "$extractor" \
   "${datadir}"_segm_long "$langdir" \
