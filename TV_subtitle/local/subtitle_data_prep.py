@@ -15,7 +15,6 @@
 # needs the subtitle path to extract the text
 
 # and utt2spk files.
-# NOTE! easiest to make
 #
 # examples:
 # ==> data/one-news-data/segments <==
@@ -76,12 +75,23 @@ def get_length(filename):
 
 
 def main(shows, pairings, outdir):
-    with open(pairs, 'r') as show_episode, \
+    with open(pairings, 'r') as show_episode, \
     open(outdir + '/wav.scp', 'w') as wav_scp, \
     open(outdir + '/utt2spk', 'w') as utt2spk, \
     open(outdir + '/raw_text', 'w') as raw_text, \
     open(outdir + '/segments', 'w') as segments:
-        print('Ran')
+        pairingreader = csv.reader(show_episode, delimiter=',')
+        for pair in pairingreader:
+            ep_id = pair[1][:7]
+            utt_id = 'unknown-{}'.format(ep_id)
+            print(pair[0])
+            # utt2spk file
+            print('{} unknown'.format(utt_id), file=utt2spk)
+            # TODO: check if the file exists as video and if not check if it
+            # exists as audio and use whichever one works
+            # attempted wav.scp
+            print('{} ffmpeg |'.format(ep_id))
+
 
 
 if __name__ == '__main__':
