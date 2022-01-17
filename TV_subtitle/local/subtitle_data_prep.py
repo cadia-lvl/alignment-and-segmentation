@@ -4,9 +4,7 @@
 # License: Apache 2.0
 #
 # Description: Take the list of show names and episode file names.
-# Then create
-# TODO the wav.scp,
-# needs the media path
+#   Then create
 
 # TODO segments,
 # needs the audio duration
@@ -14,7 +12,7 @@
 # TODO text,
 # needs the subtitle path to extract the text
 
-# and utt2spk files.
+# utt2spk, and wav.scp (needs the media path) files.
 #
 # examples:
 # ==> data/one-news-data/segments <==
@@ -55,9 +53,7 @@ def parse_arguments():
 def file_path(path):
     if os.path.isfile(path):
         return path
-    else:
-        raise argparse.ArgumentTypeError(f"readable_file:{path} is not a valid file")
-
+    return ''
 
 def get_length(filename):
     '''
@@ -81,16 +77,36 @@ def main(shows, pairings, outdir):
     open(outdir + '/raw_text', 'w') as raw_text, \
     open(outdir + '/segments', 'w') as segments:
         pairingreader = csv.reader(show_episode, delimiter=',')
+        show_details = {}
         for pair in pairingreader:
             ep_id = pair[1][:7]
             utt_id = 'unknown-{}'.format(ep_id)
-            print(pair[0])
-            # utt2spk file
-            print('{} unknown'.format(utt_id), file=utt2spk)
-            # TODO: check if the file exists as video and if not check if it
+            # Get the show details
+            if not show_details or show_details['name'] != pair[0]:
+                show_details = [show for show in shows['shows'] if \
+                show['name'] == pair[0]][0]
+
+            # Check if the file exists as video and if not check if it
             # exists as audio and use whichever one works
-            # attempted wav.scp
-            print('{} ffmpeg |'.format(ep_id))
+            video_path = '/data/misc/ruv_unprocessed/' + show_details['video_dir'] \
+                + '/' + pair[1] + '.mp4'
+            audio_path = '/data/misc/ruv_unprocessed/' + \
+                show_details['audio_dir'] + '/' + pair[1] + '.wav'
+            if file_path(video_path):
+                ep_path = video_path
+            elif file_path(audio_path):
+                ep_path = audio_path
+            else:
+                # no available file exists so don't process it for asr
+                continue
+
+            # wav.scp
+            # ac = audio channels, ar = audio rate (Hz)
+            print('{} ffmpeg -i {} -ac 1 -ar 16k -f wav - |'.format(
+                ep_id, ep_path), file=wav_scp)
+
+            # utt2spk
+            print('{} unknown'.format(utt_id), file=utt2spk)
 
 
 
