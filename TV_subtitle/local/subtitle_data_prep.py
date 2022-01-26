@@ -4,15 +4,9 @@
 # License: Apache 2.0
 #
 # Description: Take the list of show names and episode file names.
-#   Then create
-
-# TODO segments,
-# needs the audio duration
-
-# TODO text,
-# needs the subtitle path to extract the text
-
-# utt2spk, and wav.scp (needs the media path) files.
+#   Then create segments (needs the audio duration), text (needs the subtitle
+#   path to extract the text), utt2spk, and wav.scp (needs the media path)
+#   files.
 #
 # examples:
 # ==> data/one-news-data/segments <==
@@ -34,6 +28,7 @@ import os
 import subprocess
 import argparse
 from pathlib import Path
+from extract_text import print_text
 
 # parse_arguments are from the TV_subtitles local/extract_text.py file in this
 # repo by Judy Fong
@@ -71,6 +66,7 @@ def get_length(filename):
 
 
 def main(shows, pairings, outdir):
+    exclude = ['4955849T0']
     with open(pairings, 'r') as show_episode, \
     open(outdir + '/wav.scp', 'w') as wav_scp, \
     open(outdir + '/utt2spk', 'w') as utt2spk, \
@@ -79,6 +75,9 @@ def main(shows, pairings, outdir):
         pairingreader = csv.reader(show_episode, delimiter=',')
         show_details = {}
         for pair in pairingreader:
+            if pair[1] in exclude:
+                print('{} has media problems'.format(pair[1]))
+                continue
             ep_id = pair[1][:7]
             utt_id = 'unknown-{}'.format(ep_id)
             # Get the show details
@@ -100,6 +99,14 @@ def main(shows, pairings, outdir):
                 # no available file exists so don't process it for asr
                 continue
 
+            subs_path = '/data/misc/ruv_unprocessed/' + \
+                show_details['text_dir'] + '/' + pair[1] + '.vtt'
+            all_text = print_text(subs_path)
+            # raw_text
+            if not all_text:
+                continue
+            print('{} {}'.format(utt_id, all_text), file=raw_text)
+
             # wav.scp
             # ac = audio channels, ar = audio rate (Hz)
             print('{} ffmpeg -i {} -ac 1 -ar 16k -f wav - |'.format(
@@ -108,6 +115,10 @@ def main(shows, pairings, outdir):
             # utt2spk
             print('{} unknown'.format(utt_id), file=utt2spk)
 
+            # make segments
+            audio_length = get_length(ep_path)
+            print('{} {} 0 {}'.format(utt_id, ep_id, audio_length),
+            file=segments)
 
 
 if __name__ == '__main__':
