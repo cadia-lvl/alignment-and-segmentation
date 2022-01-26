@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 
 # Copyright 2021 Judy Fong (Reykjavík University) - lvl@judyyfong.xyz
-# This is based on the run.sh script made by inga in the TV_subtitles recipe
+# This is based on the run.sh script made by inga in the previous TV_subtitles
+# recipe
 #           2020 Inga Rún Helgadóttir
 
 # License Apache 2.0
 
-# Description: Get the news data in the format that Kaldi wants before aligning
-# and segmenting the data. Start by using teleprompter/888 data but since there
-# are no timestamps, put all the text together and resegment. There are no
-# speaker IDs so for the segmentation use a single speaker ID per audio file
-# and see whether that will be good enough.
-# The utterance ids are only the first 7 digits of an episode number since the
-# original episode numbers/event ids have a variable length but kaldi want a
-# standard length.
+# Description: Get the vtt subtitle data in the format that Kaldi wants before
+# aligning and segmenting the data. Start by using .vtt data but since the
+# timestamps are very off, put all the text together and resegment. There are
+# no speaker IDs so for the segmentation use a single speaker ID per audio file
+# and see whether that will be good enough.  The utterance ids are only the
+# first 7 digits of an episode number since the original episode numbers/event
+# ids have a variable length but kaldi wants a standard length.
 
-# Run from the H2 directory
+# Run from the TV subtitle directory
 
 # NOTE! segment_long_utterances_nnet3.sh creates new speaker IDs, how should I
 # treat spkIDs up to that point?
@@ -53,7 +53,7 @@ fi
 . utils/parse_options.sh || exit 1;
 
 # NOTE! change path for $data, $exp and $mfcc in conf/path.conf
-corpusname=news-data
+corpusname=subs-data
 datadir="$data"/"$corpusname"
 expdir="$exp"/"$corpusname"/segmentation
 mfcc="$mfcc"
@@ -76,13 +76,12 @@ fi
 if [ $stage -le 1 ]; then
   echo 'Create the files necessary for Kaldi and raw_text'
   echo 'Create utt2spk, wav.scp, segments and raw_text'
-  python3 local/news_data_prep.py "$datadir"
+  python3 local/subtitle_data_prep.py "$datadir"
 
   echo 'Create spk2utt'
   utils/utt2spk_to_spk2utt.pl < "$datadir"/utt2spk > "$datadir"/spk2utt
 fi
 
-# TODO: start on stage 4 of the run script and get stages from there
 if [ $normalize ] && [ $stage -le 2 ] ; then
   echo 'Clean the text'
   utils/slurm.pl --mem 4G "$datadir"/log/clean_text.log \
