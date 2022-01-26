@@ -44,7 +44,9 @@ def no_transcripts(subtitle_path):
 
     HEADER_ONLY = 10
     ACCESS_ERROR_ONLY = 36
-    return os.stat(subtitle_path).st_size in (HEADER_ONLY, ACCESS_ERROR_ONLY)
+    RESOURCE_NOT_FOUND_ON_RUV_ERROR = 40
+    return os.stat(subtitle_path).st_size in (HEADER_ONLY, ACCESS_ERROR_ONLY,
+    RESOURCE_NOT_FOUND_ON_RUV_ERROR)
 
 
 def get_text(subtitle_filename, outdir):
@@ -69,6 +71,35 @@ def get_text(subtitle_filename, outdir):
                 string = " ".join([*rest[1:]])
                 ftext.write(f"unknown-{filename}_{count:05d} {string}\n")
                 count = count + 1
+
+
+def print_text(subtitle_filename):
+    """
+        Print all the text in vtt file as one line
+    """
+    # skip header(first two) lines in file
+    text_string = ''
+    if no_transcripts(subtitle_filename):
+        print(f"{subtitle_filename} is presumed to not have transcripts")
+    else:
+        base = os.path.basename(subtitle_filename)
+        (filename, ext) = os.path.splitext(base.replace("_", ""))
+
+        text_string = ''
+        with open(subtitle_filename, "r") as fin:
+            if ext == ".vtt":
+                next(fin)
+                next(fin)
+            groups = groupby(fin, str.isspace)
+            count = 0
+            for (_, *rest) in (map(str.strip, v) for g, v in groups if not g):
+                # write to text file
+                # better to create individual speaker ids per episode or shows, more speaker ids,
+                # because a global one would create problems for cepstral mean normalization ineffective in training
+                string = " ".join([*rest[1:]])
+                text_string = text_string + " " +  string
+                count = count + 1
+        return text_string
 
 
 def main():
